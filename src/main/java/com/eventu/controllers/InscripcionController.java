@@ -1,9 +1,5 @@
 package com.eventu.controllers;
 
-<<<<<<< Updated upstream
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-=======
 import com.eventu.models.Inscripcion;
 import com.eventu.services.InscripcionService;
 import org.springframework.http.HttpStatus;
@@ -11,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
->>>>>>> Stashed changes
 import java.util.Map;
 
 @RestController
@@ -19,21 +14,6 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class InscripcionController {
 
-<<<<<<< Updated upstream
-    @GetMapping("/{id}/qr")
-    public ResponseEntity<?> obtenerCodigoQR(@PathVariable Long id) {
-        if (id <= 0) {
-            return ResponseEntity.badRequest().body(Map.of("error", "ID de inscripcion invalido."));
-        }
-
-        // Prueba para movil
-        return ResponseEntity.ok(Map.of(
-            "inscripcionId", id,
-            "codigoQr", "EVENTU-QR-INSCRIPCION-" + id + "-HASH987654",
-            "estado", "ACTIVA",
-            "evento", "Conferencia de Ingenieria de Software II"
-        ));
-=======
     private final InscripcionService inscripcionService;
 
     public InscripcionController(InscripcionService inscripcionService) {
@@ -73,6 +53,5 @@ public class InscripcionController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         }
->>>>>>> Stashed changes
     }
 }
