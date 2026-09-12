@@ -32,8 +32,11 @@ public class Usuario {
         this.creadoEn = LocalDateTime.now();
     }
 
+<<<<<<< Updated upstream
     // --- GETTERS Y SETTERS ---
 
+=======
+>>>>>>> Stashed changes
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
