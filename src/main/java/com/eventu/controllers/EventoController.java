@@ -38,4 +38,17 @@ public class EventoController {
     public ResponseEntity<List<Evento>> listarEventos() {
         return ResponseEntity.ok(eventoService.listarEventosActivos());
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> editarEvento(@PathVariable Long id, @RequestBody EventoRequestDTO request, @RequestParam Long organizadorId) {
+        try {
+            Evento eventoActualizado = eventoService.actualizarEvento(id, request, organizadorId);
+            return ResponseEntity.ok(Map.of(
+                "mensaje", "Evento actualizado exitosamente",
+                "eventoId", eventoActualizado.getId()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

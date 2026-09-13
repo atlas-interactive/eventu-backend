@@ -2,7 +2,7 @@ package com.eventu.dto;
 
 import java.time.LocalDateTime;
 
-public class EventoRequestDTO {
+public class EventoDTO {
     private String titulo;
     private String descripcion;
     private LocalDateTime fechaInicio;

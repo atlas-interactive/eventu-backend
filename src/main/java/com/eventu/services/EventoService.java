@@ -48,4 +48,37 @@ public class EventoService {
     public List<Evento> listarEventosActivos() {
         return eventoRepository.findByEstado(EstadoEvento.PUBLICADO);
     }
+
+    public Evento actualizarEvento(Long eventoId, EventoRequestDTO request, Long organizadorId) {
+        Usuario organizador = usuarioRepository.findById(organizadorId)
+                .orElseThrow(() -> new RuntimeException("Organizador no encontrado."));
+
+        if (organizador.getRol() != Rol.ORGANIZADOR) {
+            throw new RuntimeException("El usuario no tiene permisos para editar eventos.");
+        }
+
+        Evento evento = eventoRepository.findById(eventoId)
+                .orElseThrow(() -> new RuntimeException("Evento no encontrado."));
+
+        if (evento.getEstado() == EstadoEvento.CANCELADO || evento.getEstado() == EstadoEvento.FINALIZADO) {
+            throw new RuntimeException("No se puede editar un evento cancelado o finalizado.");
+        }
+
+        if (request.getTitulo() != null) evento.setTitulo(request.getTitulo());
+        if (request.getDescripcion() != null) evento.setDescripcion(request.getDescripcion());
+        if (request.getFechaInicio() != null) evento.setFechaInicio(request.getFechaInicio());
+        if (request.getUbicacion() != null) evento.setUbicacion(request.getUbicacion());
+        if (request.getCertificable() != null) evento.setCertificable(request.getCertificable());
+
+        if (request.getCuposMaximos() != null) {
+            int inscritos = evento.getCuposMaximos() - evento.getCuposDisponibles();
+            if (request.getCuposMaximos() < inscritos) {
+                throw new RuntimeException("No se puede reducir la capacidad por debajo de los inscritos actuales (" + inscritos + ").");
+            }
+            evento.setCuposDisponibles(request.getCuposMaximos() - inscritos);
+            evento.setCuposMaximos(request.getCuposMaximos());
+        }
+
+        return eventoRepository.save(evento);
+    }
 }
