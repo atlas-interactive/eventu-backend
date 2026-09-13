@@ -41,7 +41,7 @@ public class InscripcionService {
             throw new RuntimeException("No se permiten inscripciones en eventos que no esten publicados.");
         }
 
-        boolean yaInscrito = inscripcionRepository.existsByEstudianteIdAndEventoId(estudianteId, eventoId);
+        boolean yaInscrito = inscripcionRepository.existsByEstudianteIdAndEventoIdAndEstado(estudianteId, eventoId, EstadoInscripcion.ACTIVA);
         if (yaInscrito) {
             throw new RuntimeException("RN01: Ya tienes una inscripcion activa para este evento.");
         }
@@ -62,6 +62,28 @@ public class InscripcionService {
         return inscripcionRepository.save(inscripcion);
     }
 
+    @Transactional
+    public Inscripcion cancelarInscripcion(Long inscripcionId, Long estudianteId) {
+        Inscripcion inscripcion = inscripcionRepository.findById(inscripcionId)
+                .orElseThrow(() -> new RuntimeException("Inscripcion no encontrada."));
+
+        if (!inscripcion.getEstudiante().getId().equals(estudianteId)) {
+            throw new RuntimeException("No tienes permiso para cancelar esta inscripcion.");
+        }
+
+        if (inscripcion.getEstado() == EstadoInscripcion.CANCELADA) {
+            throw new RuntimeException("Esta inscripcion ya estaba cancelada.");
+        }
+
+        inscripcion.setEstado(EstadoInscripcion.CANCELADA);
+
+        Evento evento = inscripcion.getEvento();
+        evento.setCuposDisponibles(evento.getCuposDisponibles() + 1);
+        eventoRepository.save(evento);
+
+        return inscripcionRepository.save(inscripcion);
+    }
+
     public List<Inscripcion> listarInscripcionesPorEstudiante(Long estudianteId) {
         return inscripcionRepository.findByEstudianteId(estudianteId);
     }
@@ -70,4 +92,6 @@ public class InscripcionService {
         return inscripcionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Inscripcion no encontrada."));
     }
+
+ 
 }
