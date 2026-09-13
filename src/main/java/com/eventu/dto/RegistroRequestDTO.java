@@ -1,6 +1,6 @@
 package com.eventu.dto;
 
-public class UsuarioDTO {
+public class RegistroRequestDTO {
     private String nombre;
     private String correo;
     private String password;

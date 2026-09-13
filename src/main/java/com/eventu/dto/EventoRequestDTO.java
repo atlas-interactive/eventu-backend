@@ -2,13 +2,15 @@ package com.eventu.dto;
 
 import java.time.LocalDateTime;
 
-public class EventoDTO {
+public class EventoRequestDTO {
     private String titulo;
     private String descripcion;
     private LocalDateTime fechaInicio;
     private String ubicacion;
     private Integer cuposMaximos;
     private Boolean certificable;
+    private Long categoriaId;
+
 
     public String getTitulo() { return titulo; }
     public void setTitulo(String titulo) { this.titulo = titulo; }
@@ -22,4 +24,6 @@ public class EventoDTO {
     public void setCuposMaximos(Integer cuposMaximos) { this.cuposMaximos = cuposMaximos; }
     public Boolean getCertificable() { return certificable; }
     public void setCertificable(Boolean certificable) { this.certificable = certificable; }
+    public Long getCategoriaId() { return categoriaId; }
+    public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }
 }
