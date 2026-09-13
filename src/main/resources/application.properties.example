@@ -1,4 +1,9 @@
 server.port=8080
+
 spring.datasource.url=jdbc:postgresql://<TU_HOST_SUPABASE>:5432/postgres?sslmode=require
 spring.datasource.username=postgres
 spring.datasource.password=<TU_CONTRASEÑA_AQUÍ>
+
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=true

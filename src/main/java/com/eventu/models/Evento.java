@@ -43,6 +43,10 @@ public class Evento {
     @Column(name = "creado_en", updatable = false)
     private LocalDateTime creadoEn;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_id")
+    private Categoria categoria;
+
     @PrePersist
     protected void onCreate() {
         this.creadoEn = LocalDateTime.now();
@@ -80,4 +84,7 @@ public class Evento {
 
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
+
+    public Categoria getCategoria() { return categoria; }
+    public void setCategoria(Categoria categoria) { this.categoria = categoria; }
 }
