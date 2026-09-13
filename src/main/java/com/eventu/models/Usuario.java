@@ -31,8 +31,11 @@ public class Usuario {
     protected void onCreate() {
         this.creadoEn = LocalDateTime.now();
     }
+    @Column(nullable = false)
+    private Boolean activo = true;
 
-    // --- GETTERS Y SETTERS ---
+    @Column(name = "codigo_estudiantil", length = 20)
+    private String codigoEstudiantil;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -51,4 +54,9 @@ public class Usuario {
 
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
+
+    public Boolean getActivo() { return activo; }
+    public void setActivo(Boolean activo) { this.activo = activo; }
+    public String getCodigoEstudiantil() { return codigoEstudiantil; }
+    public void setCodigoEstudiantil(String codigoEstudiantil) { this.codigoEstudiantil = codigoEstudiantil; }
 }

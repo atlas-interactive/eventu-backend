@@ -8,6 +8,8 @@ import com.eventu.models.Usuario;
 import com.eventu.repositories.EventoRepository;
 import com.eventu.repositories.UsuarioRepository;
 import org.springframework.stereotype.Service;
+import com.eventu.models.Categoria;
+import com.eventu.repositories.CategoriaRepository;
 
 import java.util.List;
 
@@ -16,10 +18,12 @@ public class EventoService {
 
     private final EventoRepository eventoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final CategoriaRepository categoriaRepository;
 
-    public EventoService(EventoRepository eventoRepository, UsuarioRepository usuarioRepository) {
+    public EventoService(EventoRepository eventoRepository, UsuarioRepository usuarioRepository, CategoriaRepository categoriaRepository) {
         this.eventoRepository = eventoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.categoriaRepository = categoriaRepository;
     }
 
     public Evento crearEvento(EventoRequestDTO request, Long organizadorId) {
@@ -41,7 +45,10 @@ public class EventoService {
         nuevoEvento.setCertificable(request.getCertificable());
         nuevoEvento.setEstado(EstadoEvento.PUBLICADO);
         nuevoEvento.setOrganizador(organizador);
-
+        if (request.getCategoriaId() != null) {
+            Categoria categoria = categoriaRepository.findById(request.getCategoriaId()).orElseThrow(() -> new RuntimeException("Categoria no encontrada."));
+            nuevoEvento.setCategoria(categoria);
+        }
         return eventoRepository.save(nuevoEvento);
     }
 
@@ -77,6 +84,10 @@ public class EventoService {
             }
             evento.setCuposDisponibles(request.getCuposMaximos() - inscritos);
             evento.setCuposMaximos(request.getCuposMaximos());
+        }
+        if (request.getCategoriaId() != null) {
+            Categoria categoria = categoriaRepository.findById(request.getCategoriaId()).orElseThrow(() -> new RuntimeException("Categoria no encontrada."));
+            evento.setCategoria(categoria);
         }
 
         return eventoRepository.save(evento);
