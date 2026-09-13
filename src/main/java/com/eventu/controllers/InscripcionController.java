@@ -54,4 +54,17 @@ public class InscripcionController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         }
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> cancelarInscripcion(@PathVariable Long id, @RequestParam Long estudianteId) {
+        try {
+            Inscripcion inscripcion = inscripcionService.cancelarInscripcion(id, estudianteId);
+            return ResponseEntity.ok(Map.of(
+                "mensaje", "Inscripcion cancelada exitosamente.",
+                "inscripcionId", inscripcion.getId()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }
