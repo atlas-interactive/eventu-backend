@@ -10,9 +10,12 @@ import java.util.Optional;
 
 @Repository
 public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> {
-    boolean existsByEstudianteIdAndEventoIdAndEstado(Long estudianteId, Long eventoId, EstadoInscripcion estado);
-    List<Inscripcion> findByEstudianteId(Long estudianteId);
+
+    boolean existsByUsuarioIdAndEventoIdAndEstado(Long usuarioId, Long eventoId, EstadoInscripcion estado);
+
+    List<Inscripcion> findByUsuarioId(Long usuarioId);
+
     Optional<Inscripcion> findByCodigoQr(String codigoQr);
-    Optional<Inscripcion> findByEstudianteIdAndEventoId(Long estudianteId, Long eventoId);
-    Optional<Inscripcion> findByEstudianteIdAndEventoIdAndEstado(Long estudianteId, Long eventoId, EstadoInscripcion estado);
+
+    Optional<Inscripcion> findByUsuarioIdAndEventoIdAndEstado(Long usuarioId, Long eventoId, EstadoInscripcion estado);
 }

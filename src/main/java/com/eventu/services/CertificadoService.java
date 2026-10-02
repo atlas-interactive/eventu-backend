@@ -1,11 +1,14 @@
 package com.eventu.services;
 
+import com.eventu.exceptions.ConflictoException;
+import com.eventu.exceptions.RecursoNoEncontradoException;
 import com.eventu.models.EstadoInscripcion;
 import com.eventu.models.Evento;
 import com.eventu.models.Inscripcion;
 import com.eventu.repositories.AsistenciaRepository;
 import com.eventu.repositories.EventoRepository;
 import com.eventu.repositories.InscripcionRepository;
+import com.eventu.util.Mensajes;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -13,12 +16,14 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+/** Generación del certificado de asistencia en PDF*/
 @Service
 public class CertificadoService {
 
@@ -32,28 +37,36 @@ public class CertificadoService {
         this.asistenciaRepository = asistenciaRepository;
     }
 
-    public byte[] generarCertificadoPdf(Long estudianteId, Long eventoId) {
+    /**
+     * Genera el certificado de un usuario para un evento
+     * @throws RecursoNoEncontradoException si el evento o la inscripción activa no existen
+     * @throws ConflictoException si el evento no es certificable o la asistencia no está verificada
+     */
+    @Transactional(readOnly = true)
+    public byte[] generarCertificadoPdf(Long usuarioId, Long eventoId) {
         Evento evento = eventoRepository.findById(eventoId)
-                .orElseThrow(() -> new RuntimeException("Evento no encontrado."));
+                .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));
 
-        if (evento.getCertificable() == null || !evento.getCertificable()) {
-            throw new RuntimeException("RN15: Este evento no esta configurado como certificable.");
+        if (!Boolean.TRUE.equals(evento.getCertificable())) {
+            throw new ConflictoException("Este evento no está configurado como certificable.");
         }
 
-        Inscripcion inscripcion = inscripcionRepository.findByEstudianteIdAndEventoIdAndEstado(estudianteId, eventoId, EstadoInscripcion.ACTIVA).orElseThrow(() -> new RuntimeException("No tienes una inscripcion activa para este evento."));
-        boolean asistio = asistenciaRepository.existsByInscripcionId(inscripcion.getId());
-        if (!asistio) {
-            throw new RuntimeException("RN15: No se puede generar el certificado sin asistencia verificada.");
+        Inscripcion inscripcion = inscripcionRepository
+                .findByUsuarioIdAndEventoIdAndEstado(usuarioId, eventoId, EstadoInscripcion.ACTIVA)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No tienes una inscripción activa para este evento."));
+
+        if (!asistenciaRepository.existsByInscripcionId(inscripcion.getId())) { 
+            throw new ConflictoException("No se puede generar el certificado sin asistencia verificada.");
         }
 
         try {
-            return construirPdf(inscripcion.getEstudiante().getNombre(), evento.getTitulo(), evento.getFechaInicio());
+            return construirPdf(inscripcion.getUsuario().getNombre(), evento.getTitulo(), evento.getFechaInicio());
         } catch (IOException e) {
-            throw new RuntimeException("Error al generar el certificado en PDF.", e);
+            throw new IllegalStateException("Error al generar el certificado en PDF.", e);
         }
     }
 
-    private byte[] construirPdf(String nombreEstudiante, String tituloEvento, LocalDateTime fechaEvento) throws IOException {
+    private byte[] construirPdf(String nombreUsuario, String tituloEvento, LocalDateTime fechaEvento) throws IOException {
         try (PDDocument document = new PDDocument()) {
             PDPage page = new PDPage(PDRectangle.A4);
             document.addPage(page);
@@ -77,7 +90,7 @@ public class CertificadoService {
                 content.beginText();
                 content.setFont(tituloFont, 16);
                 content.newLineAtOffset(80, 630);
-                content.showText(nombreEstudiante);
+                content.showText(nombreUsuario);
                 content.endText();
 
                 content.beginText();

@@ -4,9 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "inscripciones", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"estudiante_id", "evento_id"})
-})
+@Table(name = "inscripciones")
 public class Inscripcion {
 
     @Id
@@ -14,8 +12,8 @@ public class Inscripcion {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "estudiante_id", nullable = false)
-    private Usuario estudiante;
+    @JoinColumn(name = "estudiante_id", nullable = false) // Si lo vamos a cambiar en bd estudiante --> usuario
+    private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "evento_id", nullable = false)
@@ -39,8 +37,8 @@ public class Inscripcion {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public Usuario getEstudiante() { return estudiante; }
-    public void setEstudiante(Usuario estudiante) { this.estudiante = estudiante; }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
 
     public Evento getEvento() { return evento; }
     public void setEvento(Evento evento) { this.evento = evento; }
