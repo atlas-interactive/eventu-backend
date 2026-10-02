@@ -1,7 +1,9 @@
 package com.eventu.config;
 
+import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,6 +19,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final String[] origenesPermitidos;
+
+    /**
+     * @param origenesPermitidos orígenes del frontend permitidos por CORS, separados por coma.
+     * Se configuran con la propiedad {@code eventu.cors.origenes} (en Render: variable EVENTU_CORS_ORIGENES)
+     */
+    public SecurityConfig(@Value("${eventu.cors.origenes:http://localhost:5173}") String[] origenesPermitidos) {
+        this.origenesPermitidos = origenesPermitidos;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -36,7 +48,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(Arrays.asList(origenesPermitidos));
         
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         
