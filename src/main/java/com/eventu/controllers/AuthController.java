@@ -1,19 +1,26 @@
 package com.eventu.controllers;
 
+import com.eventu.dto.LoginRequestDTO;
 import com.eventu.dto.RegistroRequestDTO;
 import com.eventu.models.Usuario;
 import com.eventu.services.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
 import java.util.Map;
 
+/** Registro e inicio de sesión (HU-01 y HU-02). */
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
 public class AuthController {
+
+    // TODO: reemplazar por un JWT real cuando se implemente la autenticación
+    private static final String TOKEN_PENDIENTE = "JWT_PENDIENTE_POR_GENERAR";
 
     private final AuthService authService;
 
@@ -21,57 +28,28 @@ public class AuthController {
         this.authService = authService;
     }
 
+    /** Crea una cuenta nueva con rol ESTUDIANTE */
+        // TODO: ¿quitar estudiante y que sea usuario?
+
     @PostMapping("/registro")
-    public ResponseEntity<?> registrarEstudiante(@RequestBody RegistroRequestDTO request) {
-        try {
-            if (request.getNombre() == null || request.getNombre().isBlank() ||
-                request.getCorreo() == null || request.getCorreo().isBlank() ||
-                request.getPassword() == null || request.getPassword().isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Todos los campos son obligatorios."));
-            }
-
-            if (!request.getCorreo().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.(edu|edu\\.[a-z]{2})$")) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Debe ingresar un correo institucional educativo válido."));
-            }
-
-            Usuario usuarioGuardado = authService.registrarEstudiante(request);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+    public ResponseEntity<Map<String, Object>> registrarUsuario(@Valid @RequestBody RegistroRequestDTO request) {
+        Usuario usuario = authService.registrarUsuario(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.<String, Object>of(
                 "mensaje", "Usuario registrado exitosamente.",
-                "usuarioId", usuarioGuardado.getId(),
-                "correo", usuarioGuardado.getCorreo(),
-                "rol", usuarioGuardado.getRol().name()
-            ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+                "usuarioId", usuario.getId(),
+                "correo", usuario.getCorreo(),
+                "rol", usuario.getRol().name()));
     }
 
+    /** Valida las credenciales y devuelve los datos de la sesión */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> credenciales) {
-        try {
-            String correo = credenciales.get("correo");
-            String password = credenciales.get("password");
-
-            if (correo == null || password == null || correo.isBlank() || password.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Correo y contraseña son requeridos."));
-            }
-
-            Usuario usuario = authService.autenticar(correo, password);
-
-            Map<String, Object> response = new HashMap<>();
-            // Falta generar un jwt real
-            response.put("token", "JWT_PENDIENTE_POR_GENERAR"); 
-            response.put("usuarioId", usuario.getId());
-            response.put("nombre", usuario.getNombre());
-            response.put("correo", usuario.getCorreo());
-            response.put("rol", usuario.getRol().name());
-
-            return ResponseEntity.ok(response);
-            
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequestDTO request) {
+        Usuario usuario = authService.autenticar(request.getCorreo(), request.getPassword());
+        return ResponseEntity.ok(Map.<String, Object>of(
+                "token", TOKEN_PENDIENTE,
+                "usuarioId", usuario.getId(),
+                "nombre", usuario.getNombre(),
+                "correo", usuario.getCorreo(),
+                "rol", usuario.getRol().name()));
     }
 }
