@@ -1,16 +1,19 @@
 package com.eventu.controllers;
 
-import com.eventu.models.Asistencia;
+import com.eventu.dto.ValidacionQrRequestDTO;
 import com.eventu.services.AsistenciaService;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+/** Registro de asistencia mediante código QR */
 @RestController
 @RequestMapping("/api/asistencias")
-@CrossOrigin(origins = "*")
 public class AsistenciaController {
 
     private final AsistenciaService asistenciaService;
@@ -19,28 +22,10 @@ public class AsistenciaController {
         this.asistenciaService = asistenciaService;
     }
 
+    /** Valida un código QR y registra la asistencia */
     @PostMapping("/validar-qr")
-    public ResponseEntity<?> registrarAsistencia(@RequestBody Map<String, String> payload) {
-        try {
-            String codigoQr = payload.get("codigoQr");
-
-            if (codigoQr == null || codigoQr.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "El código QR es obligatorio."));
-            }
-
-            Asistencia asistencia = asistenciaService.registrarAsistenciaPorQr(codigoQr);
-
-            return ResponseEntity.ok(Map.of(
-                "mensaje", "Asistencia registrada exitosamente.",
-                "asistenciaId", asistencia.getId(),
-                "estudiante", asistencia.getInscripcion().getEstudiante().getNombre(),
-                "evento", asistencia.getInscripcion().getEvento().getTitulo(),
-                "fechaRegistro", asistencia.getFechaRegistro().toString()
-            ));
-
-        } catch (RuntimeException e) {
-            HttpStatus status = e.getMessage().contains("RN") ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
-            return ResponseEntity.status(status).body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<Map<String, Object>> registrarAsistencia(@Valid @RequestBody ValidacionQrRequestDTO request) {
+        return ResponseEntity.ok(
+                asistenciaService.registrarAsistenciaPorQr(request.getCodigoQr(), request.getOrganizadorId()));
     }
 }

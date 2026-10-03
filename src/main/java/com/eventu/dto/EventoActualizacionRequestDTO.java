@@ -1,36 +1,34 @@
 package com.eventu.dto;
 
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 
-/** Datos para crear un evento. Todos los campos son obligatorios excepto "certificable" */
-public class EventoRequestDTO {
+/**
+ * Datos para editar un evento. Todos los campos son opcionales, solo se modifican los que vienen en la petición
+ */
+public class EventoActualizacionRequestDTO {
 
-    @NotBlank(message = "El título es obligatorio.")
+    @Pattern(regexp = "(?s).*\\S.*", message = "El título no puede estar vacío.")
     @Size(max = 150, message = "El título no puede superar los 150 caracteres.")
     private String titulo;
 
-    @NotBlank(message = "La descripción es obligatoria.")
+    @Pattern(regexp = "(?s).*\\S.*", message = "La descripción no puede estar vacía.")
     private String descripcion;
 
-    @NotNull(message = "La fecha y hora de inicio son obligatorias.")
     private LocalDateTime fechaInicio;
 
-    @NotBlank(message = "La ubicación es obligatoria.")
+    @Pattern(regexp = "(?s).*\\S.*", message = "La ubicación no puede estar vacía.")
     @Size(max = 150, message = "La ubicación no puede superar los 150 caracteres.")
     private String ubicacion;
 
-    @NotNull(message = "El cupo máximo es obligatorio.")
     @Min(value = 1, message = "El cupo máximo debe ser mayor a cero.")
     private Integer cuposMaximos;
 
     private Boolean certificable;
 
-    @NotNull(message = "La categoría es obligatoria.")
     private Long categoriaId;
 
     public String getTitulo() { return titulo; }

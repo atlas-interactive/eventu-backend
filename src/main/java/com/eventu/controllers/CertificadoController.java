@@ -4,13 +4,14 @@ import com.eventu.services.CertificadoService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
+/** Descarga de certificados de asistencia */
 @RestController
 @RequestMapping("/api/certificados")
-@CrossOrigin(origins = "*")
 public class CertificadoController {
 
     private final CertificadoService certificadoService;
@@ -19,16 +20,13 @@ public class CertificadoController {
         this.certificadoService = certificadoService;
     }
 
-    @GetMapping("/evento/{eventoId}/estudiante/{estudianteId}")
-    public ResponseEntity<?> descargarCertificado(@PathVariable Long eventoId, @PathVariable Long estudianteId) {
-        try {
-            byte[] pdf = certificadoService.generarCertificadoPdf(estudianteId, eventoId);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=certificado.pdf")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(pdf);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    /** Descarga el certificado en PDF de un usuario para un evento */
+    @GetMapping("/evento/{eventoId}/usuario/{usuarioId}")
+    public ResponseEntity<byte[]> descargarCertificado(@PathVariable Long eventoId, @PathVariable Long usuarioId) {
+        byte[] pdf = certificadoService.generarCertificadoPdf(usuarioId, eventoId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=certificado.pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }
