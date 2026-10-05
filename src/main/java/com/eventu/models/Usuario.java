@@ -34,8 +34,8 @@ public class Usuario {
     @Column(nullable = false)
     private Boolean activo = true;
 
-    @Column(name = "codigo_estudiantil", length = 20)
-    private String codigoEstudiantil;
+    @Column(name = "codigo_institucional", length = 20)
+    private String codigoInstitucional;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -57,6 +57,6 @@ public class Usuario {
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
-    public String getCodigoEstudiantil() { return codigoEstudiantil; }
-    public void setCodigoEstudiantil(String codigoEstudiantil) { this.codigoEstudiantil = codigoEstudiantil; }
+    public String getCodigoInstitucional() { return codigoInstitucional; }
+    public void setCodigoInstitucional(String codigoInstitucional) { this.codigoInstitucional = codigoInstitucional; }
 }
