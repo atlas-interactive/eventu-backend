@@ -1,5 +1,6 @@
 package com.eventu.dto;
 
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -18,6 +19,7 @@ public class EventoActualizacionRequestDTO {
     @Pattern(regexp = "(?s).*\\S.*", message = "La descripción no puede estar vacía.")
     private String descripcion;
 
+    @Future(message = "La fecha de inicio debe ser futura.")
     private LocalDateTime fechaInicio;
 
     @Pattern(regexp = "(?s).*\\S.*", message = "La ubicación no puede estar vacía.")

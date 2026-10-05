@@ -1,5 +1,6 @@
 package com.eventu.dto;
 
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +19,7 @@ public class EventoRequestDTO {
     private String descripcion;
 
     @NotNull(message = "La fecha y hora de inicio son obligatorias.")
+    @Future(message = "La fecha de inicio debe ser futura.")
     private LocalDateTime fechaInicio;
 
     @NotBlank(message = "La ubicación es obligatoria.")
