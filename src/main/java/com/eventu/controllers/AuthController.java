@@ -28,9 +28,7 @@ public class AuthController {
         this.authService = authService;
     }
 
-    /** Crea una cuenta nueva con rol ESTUDIANTE */
-        // TODO: ¿quitar estudiante y que sea usuario?
-
+    /** Crea una cuenta nueva con rol USUARIO */
     @PostMapping("/registro")
     public ResponseEntity<Map<String, Object>> registrarUsuario(@Valid @RequestBody RegistroRequestDTO request) {
         Usuario usuario = authService.registrarUsuario(request);

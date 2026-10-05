@@ -27,7 +27,7 @@ public class InscripcionController {
         this.inscripcionService = inscripcionService;
     }
 
-    /** Inscribe a un usuario (estudiante u organizador) en un evento*/
+    /** Inscribe en un evento a un usuario o a un organizador */
     @PostMapping
     public ResponseEntity<Map<String, Object>> inscribirAEvento(@RequestParam Long usuarioId, @RequestParam Long eventoId) {
         Inscripcion inscripcion = inscripcionService.inscribirUsuario(usuarioId, eventoId);

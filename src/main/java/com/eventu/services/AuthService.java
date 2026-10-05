@@ -27,7 +27,7 @@ public class AuthService {
     }
 
     /**
-     * Registra una cuenta nueva. Toda cuenta nace con rol ESTUDIANTE (usuario normal); el rol de organizador lo asigna después un administrador (HU-03).
+     * Registra una cuenta nueva. Toda cuenta nace con rol USUARIO; el rol de organizador lo asigna después un administrador (HU-03).
      * @param request datos ya validados (correo institucional, contraseña de 8 a 72 caracteres)
      * @return el usuario guardado
      * @throws ConflictoException si el correo ya está registrado
@@ -43,7 +43,7 @@ public class AuthService {
         nuevoUsuario.setNombre(request.getNombre().trim());
         nuevoUsuario.setCorreo(correo);
         nuevoUsuario.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        nuevoUsuario.setRol(Rol.ESTUDIANTE);
+        nuevoUsuario.setRol(Rol.USUARIO);
         Usuario guardado = usuarioRepository.save(nuevoUsuario);
 
         logService.registrarExito(guardado.getId(), LogService.ACCION_REGISTRO, LogService.ENTIDAD_USUARIO, guardado.getId());

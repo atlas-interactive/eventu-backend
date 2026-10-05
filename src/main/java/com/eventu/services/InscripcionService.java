@@ -40,7 +40,7 @@ public class InscripcionService {
 
     /**
      * Inscribe a un usuario en un evento y genera su código QR único
-     * Puede inscribirse cualquier usuario con la cuenta habilitada, sea estudiante u organizador
+     * Puede inscribirse cualquier usuario con la cuenta habilitada, tenga rol USUARIO u ORGANIZADOR
      *
      * @throws ConflictoException si el evento no está publicado, el usuario ya tiene una inscripción activa o no quedan cupos
      */
