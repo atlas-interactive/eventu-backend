@@ -10,6 +10,7 @@ import com.eventu.models.Evento;
 import com.eventu.models.Inscripcion;
 import com.eventu.models.Rol;
 import com.eventu.models.Usuario;
+import com.eventu.repositories.AsistenciaRepository;
 import com.eventu.repositories.EventoRepository;
 import com.eventu.repositories.InscripcionRepository;
 import com.eventu.util.Mensajes;
@@ -28,13 +29,16 @@ public class InscripcionService {
 
     private final InscripcionRepository inscripcionRepository;
     private final EventoRepository eventoRepository;
+    private final AsistenciaRepository asistenciaRepository;
     private final AutorizacionService autorizacionService;
     private final LogService logService;
 
     public InscripcionService(InscripcionRepository inscripcionRepository, EventoRepository eventoRepository,
-                              AutorizacionService autorizacionService, LogService logService) {
+                              AsistenciaRepository asistenciaRepository, AutorizacionService autorizacionService,
+                              LogService logService) {
         this.inscripcionRepository = inscripcionRepository;
         this.eventoRepository = eventoRepository;
+        this.asistenciaRepository = asistenciaRepository;
         this.autorizacionService = autorizacionService;
         this.logService = logService;
     }
@@ -86,7 +90,7 @@ public class InscripcionService {
      * Cancela una inscripción y libera su cupo. La inscripción se conserva como CANCELADA
      *
      * @throws AccesoDenegadoException si la inscripción pertenece a otro usuario
-     * @throws ConflictoException si ya estaba cancelada
+     * @throws ConflictoException si ya estaba cancelada o si ya tiene asistencia registrada
      */
     @Transactional
     public Inscripcion cancelarInscripcion(Long inscripcionId, Long usuarioId) {
@@ -101,6 +105,11 @@ public class InscripcionService {
             logService.registrarFallo(usuarioId, LogService.ACCION_CANCELAR_INSCRIPCION,
                     LogService.ENTIDAD_INSCRIPCION, inscripcionId, "Inscripción ya cancelada");
             throw new ConflictoException("Esta inscripción ya estaba cancelada.");
+        }
+        if (asistenciaRepository.existsByInscripcionId(inscripcionId)) {
+            logService.registrarFallo(usuarioId, LogService.ACCION_CANCELAR_INSCRIPCION,
+                    LogService.ENTIDAD_INSCRIPCION, inscripcionId, "Asistencia ya registrada");
+            throw new ConflictoException("No puedes cancelar tu inscripción porque ya asististe al evento.");
         }
 
         Evento evento = eventoRepository.buscarPorIdConBloqueo(inscripcion.getEvento().getId())
