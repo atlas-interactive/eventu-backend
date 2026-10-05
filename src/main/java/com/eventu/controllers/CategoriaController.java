@@ -35,15 +35,17 @@ public class CategoriaController {
         return ResponseEntity.ok(categoriaService.listarCategorias(soloActivas));
     }
 
-    /** Crea una categoría. */
+    /** Crea una categoría. Solo un administrador puede hacerlo (se identifica con {@code administradorId}) */
     @PostMapping
-    public ResponseEntity<CategoriaResponseDTO> crearCategoria(@Valid @RequestBody CategoriaRequestDTO request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(categoriaService.crearCategoria(request));
+    public ResponseEntity<CategoriaResponseDTO> crearCategoria(@Valid @RequestBody CategoriaRequestDTO request,
+                                                               @RequestParam Long administradorId) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(categoriaService.crearCategoria(request, administradorId));
     }
 
-    /** Cambia el nombre de una categoría y, opcionalmente, la activa o desactiva */
+    /** Cambia el nombre de una categoría y, opcionalmente, la activa o desactiva. Solo un administrador puede hacerlo */
     @PutMapping("/{id}")
-    public ResponseEntity<CategoriaResponseDTO> editarCategoria(@PathVariable Long id, @Valid @RequestBody CategoriaRequestDTO request) {
-        return ResponseEntity.ok(categoriaService.editarCategoria(id, request));
+    public ResponseEntity<CategoriaResponseDTO> editarCategoria(@PathVariable Long id, @Valid @RequestBody CategoriaRequestDTO request,
+                                                                @RequestParam Long administradorId) {
+        return ResponseEntity.ok(categoriaService.editarCategoria(id, request, administradorId));
     }
 }

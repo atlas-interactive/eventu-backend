@@ -44,6 +44,19 @@ public class AutorizacionService {
         return usuario;
     }
 
+    /**
+     * Busca un usuario y exige que sea administrador
+     *
+     * @throws AccesoDenegadoException si su rol no es ADMIN
+     */
+    public Usuario obtenerAdministrador(Long usuarioId) {
+        Usuario usuario = obtenerUsuario(usuarioId);
+        if (usuario.getRol() != Rol.ADMIN) {
+            throw new AccesoDenegadoException(Mensajes.SOLO_ADMINISTRADOR);
+        }
+        return usuario;
+    }
+
     /** solo el organizador que creó el evento puede modificarlo; el administrador puede con todos */
     public boolean puedeModificarEvento(Usuario gestor, Evento evento) {
         return gestor.getRol() == Rol.ADMIN || evento.getOrganizador().getId().equals(gestor.getId());

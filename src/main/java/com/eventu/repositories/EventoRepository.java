@@ -19,6 +19,9 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
 
     List<Evento> findByOrganizadorId(Long organizadorId);
 
+    /** Cuenta los eventos de una categoría en un estado dado (por ejemplo, los publicados) */
+    long countByCategoriaIdAndEstado(Long categoriaId, EstadoEvento estado);
+
     /**
      * Busca el evento bloqueando su fila hasta que termine la transacción.
      * Se usa al cambiar los cupos para que dos inscripciones simultáneas no ocupen el mismo cupo.
