@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Reglas de permisos que comparten varios servicios.
- * actual el usuario llega como parámetro de la petición; cuando exista el JWT --> cambiar de dónde se obtiene su id
+ * Por ahora el usuario llega como parámetro de la petición; cuando exista el JWT habrá que cambiar de dónde se obtiene su id.
  */
 @Service
 public class AutorizacionService {
@@ -23,26 +23,21 @@ public class AutorizacionService {
     }
 
     /**
-     * Busca un usuario existente y con la cuenta habilitada
+     * Busca un usuario existente
      *
      * @throws RecursoNoEncontradoException si el usuario no existe
-     * @throws AccesoDenegadoException si la cuenta está deshabilitada
      */
-    public Usuario obtenerUsuarioActivo(Long usuarioId) {
-        Usuario usuario = usuarioRepository.findById(usuarioId)
+    public Usuario obtenerUsuario(Long usuarioId) {
+        return usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.USUARIO_NO_ENCONTRADO));
-        if (!Boolean.TRUE.equals(usuario.getActivo())) {
-            throw new AccesoDenegadoException(Mensajes.CUENTA_DESHABILITADA);
-        }
-        return usuario;
     }
 
     /**
-     * Busca un usuario activo que pueda gestionar eventos
+     * Busca un usuario que pueda gestionar eventos
      * @throws AccesoDenegadoException si su rol no permite gestionar eventos
      */
     public Usuario obtenerGestorDeEventos(Long usuarioId) {
-        Usuario usuario = obtenerUsuarioActivo(usuarioId);
+        Usuario usuario = obtenerUsuario(usuarioId);
         if (usuario.getRol() != Rol.ORGANIZADOR && usuario.getRol() != Rol.ADMIN) {
             throw new AccesoDenegadoException(Mensajes.SIN_PERMISO_GESTIONAR_EVENTOS);
         }

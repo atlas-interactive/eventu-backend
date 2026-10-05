@@ -40,13 +40,13 @@ public class InscripcionService {
 
     /**
      * Inscribe a un usuario en un evento y genera su código QR único
-     * Puede inscribirse cualquier usuario con la cuenta habilitada, tenga rol USUARIO u ORGANIZADOR
+     * Puede inscribirse cualquier usuario, tenga rol USUARIO u ORGANIZADOR
      *
      * @throws ConflictoException si el evento no está publicado, el usuario ya tiene una inscripción activa o no quedan cupos
      */
     @Transactional
     public Inscripcion inscribirUsuario(Long usuarioId, Long eventoId) {
-        Usuario usuario = autorizacionService.obtenerUsuarioActivo(usuarioId);
+        Usuario usuario = autorizacionService.obtenerUsuario(usuarioId);
         // La fila del evento se bloquea: dos inscripciones simultáneas al último cupo se atienden una tras otra
         Evento evento = eventoRepository.buscarPorIdConBloqueo(eventoId)
                 .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));

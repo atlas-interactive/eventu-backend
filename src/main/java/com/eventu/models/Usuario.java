@@ -31,8 +31,6 @@ public class Usuario {
     protected void onCreate() {
         this.creadoEn = LocalDateTime.now();
     }
-    @Column(nullable = false)
-    private Boolean activo = true;
 
     @Column(name = "codigo_institucional", length = 20)
     private String codigoInstitucional;
@@ -55,8 +53,7 @@ public class Usuario {
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
 
-    public Boolean getActivo() { return activo; }
-    public void setActivo(Boolean activo) { this.activo = activo; }
+
     public String getCodigoInstitucional() { return codigoInstitucional; }
     public void setCodigoInstitucional(String codigoInstitucional) { this.codigoInstitucional = codigoInstitucional; }
 }
