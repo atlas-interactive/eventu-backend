@@ -65,7 +65,7 @@ public class EventoService {
         return guardado;
     }
 
-    /** Lista los eventos publicados. Los cancelados y finalizados no aparecen en la consulta */
+    /** Lista los eventos publicados. Los cancelados no aparecen en la consulta */
     @Transactional(readOnly = true)
     public List<EventoResponseDTO> listarEventosActivos() {
         return eventoRepository.findByEstado(EstadoEvento.PUBLICADO).stream()
@@ -76,7 +76,7 @@ public class EventoService {
     /**
      * Edita los campos enviados de un evento
      * @throws AccesoDenegadoException si el usuario no es el dueño del evento
-     * @throws ConflictoException si el evento está cancelado o finalizado, o si el nuevo cupo es menor que los inscritos actuales
+     * @throws ConflictoException si el evento está cancelado, o si el nuevo cupo es menor que los inscritos actuales
      */
     @Transactional
     public Evento actualizarEvento(Long eventoId, EventoActualizacionRequestDTO request, Long organizadorId) {
@@ -90,10 +90,10 @@ public class EventoService {
                     eventoId, "Intento de editar un evento ajeno");
             throw new AccesoDenegadoException(Mensajes.EVENTO_AJENO);
         }
-        if (evento.getEstado() == EstadoEvento.CANCELADO || evento.getEstado() == EstadoEvento.FINALIZADO) {
+        if (evento.getEstado() == EstadoEvento.CANCELADO) {
             logService.registrarFallo(organizadorId, LogService.ACCION_EDITAR_EVENTO, LogService.ENTIDAD_EVENTO,
-                    eventoId, "Evento cancelado o finalizado");
-            throw new ConflictoException("No se puede editar un evento cancelado o finalizado.");
+                    eventoId, "Evento cancelado");
+            throw new ConflictoException("No se puede editar un evento cancelado.");
         }
 
         aplicarCambios(evento, request);

@@ -8,7 +8,9 @@ import com.eventu.models.EstadoEvento;
 import com.eventu.models.EstadoInscripcion;
 import com.eventu.models.Evento;
 import com.eventu.models.Inscripcion;
+import com.eventu.models.Rol;
 import com.eventu.models.Usuario;
+import com.eventu.repositories.AsistenciaRepository;
 import com.eventu.repositories.EventoRepository;
 import com.eventu.repositories.InscripcionRepository;
 import com.eventu.util.Mensajes;
@@ -27,26 +29,35 @@ public class InscripcionService {
 
     private final InscripcionRepository inscripcionRepository;
     private final EventoRepository eventoRepository;
+    private final AsistenciaRepository asistenciaRepository;
     private final AutorizacionService autorizacionService;
     private final LogService logService;
 
     public InscripcionService(InscripcionRepository inscripcionRepository, EventoRepository eventoRepository,
-                              AutorizacionService autorizacionService, LogService logService) {
+                              AsistenciaRepository asistenciaRepository, AutorizacionService autorizacionService,
+                              LogService logService) {
         this.inscripcionRepository = inscripcionRepository;
         this.eventoRepository = eventoRepository;
+        this.asistenciaRepository = asistenciaRepository;
         this.autorizacionService = autorizacionService;
         this.logService = logService;
     }
 
     /**
      * Inscribe a un usuario en un evento y genera su código QR único
-     * Puede inscribirse cualquier usuario con la cuenta habilitada, sea estudiante u organizador
+     * Pueden inscribirse los usuarios con rol USUARIO u ORGANIZADOR; el administrador no
      *
+     * @throws AccesoDenegadoException si el usuario es administrador
      * @throws ConflictoException si el evento no está publicado, el usuario ya tiene una inscripción activa o no quedan cupos
      */
     @Transactional
     public Inscripcion inscribirUsuario(Long usuarioId, Long eventoId) {
-        Usuario usuario = autorizacionService.obtenerUsuarioActivo(usuarioId);
+        Usuario usuario = autorizacionService.obtenerUsuario(usuarioId);
+        if (usuario.getRol() == Rol.ADMIN) {
+            logService.registrarFallo(usuarioId, LogService.ACCION_INSCRIBIR, LogService.ENTIDAD_EVENTO, eventoId,
+                    "Un administrador no puede inscribirse");
+            throw new AccesoDenegadoException("Los administradores no pueden inscribirse en eventos.");
+        }
         // La fila del evento se bloquea: dos inscripciones simultáneas al último cupo se atienden una tras otra
         Evento evento = eventoRepository.buscarPorIdConBloqueo(eventoId)
                 .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));
@@ -79,7 +90,7 @@ public class InscripcionService {
      * Cancela una inscripción y libera su cupo. La inscripción se conserva como CANCELADA
      *
      * @throws AccesoDenegadoException si la inscripción pertenece a otro usuario
-     * @throws ConflictoException si ya estaba cancelada
+     * @throws ConflictoException si ya estaba cancelada o si ya tiene asistencia registrada
      */
     @Transactional
     public Inscripcion cancelarInscripcion(Long inscripcionId, Long usuarioId) {
@@ -94,6 +105,11 @@ public class InscripcionService {
             logService.registrarFallo(usuarioId, LogService.ACCION_CANCELAR_INSCRIPCION,
                     LogService.ENTIDAD_INSCRIPCION, inscripcionId, "Inscripción ya cancelada");
             throw new ConflictoException("Esta inscripción ya estaba cancelada.");
+        }
+        if (asistenciaRepository.existsByInscripcionId(inscripcionId)) {
+            logService.registrarFallo(usuarioId, LogService.ACCION_CANCELAR_INSCRIPCION,
+                    LogService.ENTIDAD_INSCRIPCION, inscripcionId, "Asistencia ya registrada");
+            throw new ConflictoException("No puedes cancelar tu inscripción porque ya asististe al evento.");
         }
 
         Evento evento = eventoRepository.buscarPorIdConBloqueo(inscripcion.getEvento().getId())
