@@ -3,6 +3,7 @@ package com.eventu.controllers;
 import com.eventu.dto.LoginRequestDTO;
 import com.eventu.dto.RegistroRequestDTO;
 import com.eventu.models.Usuario;
+import com.eventu.security.JwtService;
 import com.eventu.services.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,13 +20,13 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    // TODO: reemplazar por un JWT real cuando se implemente la autenticación
-    private static final String TOKEN_PENDIENTE = "JWT_PENDIENTE_POR_GENERAR";
-
     private final AuthService authService;
+    private final JwtService jwtService;
+    
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, JwtService jwtService) {
         this.authService = authService;
+        this.jwtService = jwtService;
     }
 
     /** Crea una cuenta nueva con rol USUARIO */
@@ -44,7 +45,7 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequestDTO request) {
         Usuario usuario = authService.autenticar(request.getCorreo(), request.getPassword());
         return ResponseEntity.ok(Map.<String, Object>of(
-                "token", TOKEN_PENDIENTE,
+                "token", jwtService.generarToken(usuario.getId(), usuario.getRol()),
                 "usuarioId", usuario.getId(),
                 "nombre", usuario.getNombre(),
                 "correo", usuario.getCorreo(),

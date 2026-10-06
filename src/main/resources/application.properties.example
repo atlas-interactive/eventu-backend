@@ -11,3 +11,6 @@ spring.jpa.show-sql=true
 # Orígenes del frontend permitidos por CORS, separados por coma.
 # En producción agrega la URL del frontend desplegado (por ejemplo la de Vercel).
 eventu.cors.origenes=http://localhost:5173
+
+eventu.jwt.secret=${JWT_SECRET}
+eventu.jwt.expiracion-ms=86400000
