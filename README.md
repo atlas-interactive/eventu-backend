@@ -12,7 +12,7 @@ Servicio Backend central desarrollado en Java Spring Boot para la plataforma **E
 ## Configuración Local
 
 ### Prerrequisitos
-* JDK 17 o superior
+* JDK 25
 * Apache Maven
 * Cuenta en Supabase con el script DDL ejecutado
 
