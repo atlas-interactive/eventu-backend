@@ -2,10 +2,13 @@ package com.eventu.controllers;
 
 import com.eventu.dto.CategoriaRequestDTO;
 import com.eventu.dto.CategoriaResponseDTO;
+import com.eventu.security.UsuarioAutenticado;
 import com.eventu.services.CategoriaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,10 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.eventu.security.UsuarioAutenticado;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 
@@ -32,38 +31,37 @@ public class CategoriaController {
         this.categoriaService = categoriaService;
     }
 
-
     /** Lista las categorías. Con {@code soloActivas=true} devuelve solo las que se pueden elegir al crear un evento */
     @GetMapping
     public ResponseEntity<List<CategoriaResponseDTO>> obtenerCategorias(@RequestParam(defaultValue = "false") boolean soloActivas) {
         return ResponseEntity.ok(categoriaService.listarCategorias(soloActivas));
     }
 
-    /** Crea una categoría. Solo un administrador puede hacerlo (se identifica con {@code administradorId}) */
+    /** Crea una categoría. Solo un administrador puede hacerlo (se identifica con el token) */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoriaResponseDTO> crearCategoria(@Valid @RequestBody CategoriaRequestDTO request,
-                                                            @AuthenticationPrincipal UsuarioAutenticado actual) {
+    public ResponseEntity<CategoriaResponseDTO> crearCategoria(@Valid @RequestBody CategoriaRequestDTO request, @AuthenticationPrincipal UsuarioAutenticado actual) {
         return ResponseEntity.status(HttpStatus.CREATED).body(categoriaService.crearCategoria(request, actual.id()));
     }
 
+    /** Cambia el nombre de una categoría. El estado se cambia con los endpoints de activar y desactivar */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoriaResponseDTO> editarCategoria(@PathVariable Long id,
-                                                                @Valid @RequestBody CategoriaRequestDTO request,
-                                                                @AuthenticationPrincipal UsuarioAutenticado actual) {
+    public ResponseEntity<CategoriaResponseDTO> editarCategoria(@PathVariable Long id, @Valid @RequestBody CategoriaRequestDTO request, @AuthenticationPrincipal UsuarioAutenticado actual) {
         return ResponseEntity.ok(categoriaService.editarCategoria(id, request, actual.id()));
     }
 
     /** Desactiva una categoría (no la elimina). Solo necesita el id; no lleva cuerpo */
     @PatchMapping("/{id}/desactivar")
-    public ResponseEntity<CategoriaResponseDTO> desactivarCategoria(@PathVariable Long id, @RequestParam Long administradorId) {
-        return ResponseEntity.ok(categoriaService.desactivarCategoria(id, administradorId));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoriaResponseDTO> desactivarCategoria(@PathVariable Long id,  @AuthenticationPrincipal UsuarioAutenticado actual) {
+        return ResponseEntity.ok(categoriaService.desactivarCategoria(id, actual.id()));
     }
 
-    /** Reactiva una categoría*/
+    /** Reactiva una categoría */
     @PatchMapping("/{id}/activar")
-    public ResponseEntity<CategoriaResponseDTO> activarCategoria(@PathVariable Long id, @RequestParam Long administradorId) {
-        return ResponseEntity.ok(categoriaService.activarCategoria(id, administradorId));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoriaResponseDTO> activarCategoria(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado actual) {
+        return ResponseEntity.ok(categoriaService.activarCategoria(id, actual.id()));
     }
 }
