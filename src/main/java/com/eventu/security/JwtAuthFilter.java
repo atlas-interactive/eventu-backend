@@ -19,6 +19,7 @@ import java.util.List;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    private static final Logger LOG = LoggerFactory.getLogger(JwtAuthFilter.class);
     private static final String PREFIJO = "Bearer ";
 
     private final JwtService jwtService;
@@ -46,7 +47,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 });
             } catch (JwtException | IllegalArgumentException e) {
-                // Token inválido o vencido: se continúa sin autenticar
+                LOG.warn("Token JWT rechazado en {} {}: {}", request.getMethod(), request.getRequestURI(), e.getClass().getSimpleName());
             }
         }
         chain.doFilter(request, response);

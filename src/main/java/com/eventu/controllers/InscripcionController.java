@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.eventu.security.UsuarioAutenticado;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import java.util.List;
 import java.util.Map;
 
@@ -27,34 +31,34 @@ public class InscripcionController {
         this.inscripcionService = inscripcionService;
     }
 
-    /** Inscribe en un evento a un usuario o a un organizador */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> inscribirAEvento(@RequestParam Long usuarioId, @RequestParam Long eventoId) {
-        Inscripcion inscripcion = inscripcionService.inscribirUsuario(usuarioId, eventoId);
+    public ResponseEntity<Map<String, Object>> inscribirAEvento(@RequestParam Long eventoId,
+                                                                @AuthenticationPrincipal UsuarioAutenticado actual) {
+        Inscripcion inscripcion = inscripcionService.inscribirUsuario(actual.id(), eventoId);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.<String, Object>of(
                 "mensaje", "Inscripción realizada exitosamente.",
                 "inscripcionId", inscripcion.getId(),
                 "codigoQr", inscripcion.getCodigoQr()));
     }
 
-    /** Lista las inscripciones de un usuario */
-    @GetMapping("/usuario/{usuarioId}")
-    public ResponseEntity<List<InscripcionResponseDTO>> listarInscripcionesDeUsuario(@PathVariable Long usuarioId) {
-        return ResponseEntity.ok(inscripcionService.listarInscripcionesDeUsuario(usuarioId));
+    /** Solo devuelve las inscripciones del usuario autenticado */
+    @GetMapping("/mias")
+    public ResponseEntity<List<InscripcionResponseDTO>> listarMisInscripciones(
+            @AuthenticationPrincipal UsuarioAutenticado actual) {
+        return ResponseEntity.ok(inscripcionService.listarInscripcionesDeUsuario(actual.id()));
     }
 
-    /** Entrega el código QR de una inscripción a su dueño */
     @GetMapping("/{id}/qr")
-    public ResponseEntity<Map<String, Object>> obtenerCodigoQr(@PathVariable Long id, @RequestParam Long usuarioId) {
-        return ResponseEntity.ok(inscripcionService.obtenerCodigoQr(id, usuarioId));
+    public ResponseEntity<Map<String, Object>> obtenerCodigoQr(@PathVariable Long id,
+                                                            @AuthenticationPrincipal UsuarioAutenticado actual) {
+        return ResponseEntity.ok(inscripcionService.obtenerCodigoQr(id, actual.id()));
     }
 
-    /** Cancela una inscripción (eliminación lógica: queda como CANCELADA) */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> cancelarInscripcion(@PathVariable Long id,@RequestParam Long usuarioId) {
-        Inscripcion inscripcion = inscripcionService.cancelarInscripcion(id, usuarioId);
+    public ResponseEntity<Map<String, Object>> cancelarInscripcion(@PathVariable Long id,
+                                                                    @AuthenticationPrincipal UsuarioAutenticado actual) {
+        Inscripcion inscripcion = inscripcionService.cancelarInscripcion(id, actual.id());
         return ResponseEntity.ok(Map.<String, Object>of(
-                "mensaje", "Inscripción cancelada exitosamente.",
-                "inscripcionId", inscripcion.getId()));
+                "mensaje", "Inscripción cancelada exitosamente.", "inscripcionId", inscripcion.getId()));
     }
 }

@@ -17,6 +17,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.eventu.security.UsuarioAutenticado;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import java.util.List;
 import java.util.Map;
 
@@ -31,24 +35,28 @@ public class EventoController {
         this.eventoService = eventoService;
     }
 
-    /** Crea un evento. El organizador se identifica con {@code organizadorId} hasta que exista el JWT */
-    @PostMapping
-    public ResponseEntity<Map<String, Object>> crearEvento(@Valid @RequestBody EventoRequestDTO request, @RequestParam Long organizadorId) {
-        Evento evento = eventoService.crearEvento(request, organizadorId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.<String, Object>of("mensaje", "Evento creado exitosamente.", "eventoId", evento.getId()));
-    }
-
     /** Lista los eventos publicados */
     @GetMapping
     public ResponseEntity<List<EventoResponseDTO>> listarEventos() {
         return ResponseEntity.ok(eventoService.listarEventosActivos());
     }
 
-    /** Edita los campos enviados de un evento. Solo su organizador (o un administrador) puede hacerlo */
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ORGANIZADOR','ADMIN')")
+    public ResponseEntity<Map<String, Object>> crearEvento(@Valid @RequestBody EventoRequestDTO request,
+                                                            @AuthenticationPrincipal UsuarioAutenticado actual) {
+        Evento evento = eventoService.crearEvento(request, actual.id());
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.<String, Object>of(
+                "mensaje", "Evento creado exitosamente.", "eventoId", evento.getId()));
+    }
+
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ORGANIZADOR','ADMIN')")
     public ResponseEntity<Map<String, Object>> editarEvento(@PathVariable Long id,
-                                                            @Valid @RequestBody EventoActualizacionRequestDTO request, @RequestParam Long organizadorId) {
-        Evento evento = eventoService.actualizarEvento(id, request, organizadorId);
-        return ResponseEntity.ok(Map.<String, Object>of("mensaje", "Evento actualizado exitosamente.", "eventoId", evento.getId()));
+                                                            @Valid @RequestBody EventoActualizacionRequestDTO request,
+                                                            @AuthenticationPrincipal UsuarioAutenticado actual) {
+        Evento evento = eventoService.actualizarEvento(id, request, actual.id());
+        return ResponseEntity.ok(Map.<String, Object>of(
+                "mensaje", "Evento actualizado exitosamente.", "eventoId", evento.getId()));
     }
 }

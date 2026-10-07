@@ -9,11 +9,6 @@ public class ValidacionQrRequestDTO {
     @NotBlank(message = "El código QR es obligatorio.")
     private String codigoQr;
 
-    @NotNull(message = "El organizador es obligatorio.")
-    private Long organizadorId;
-
     public String getCodigoQr() { return codigoQr; }
     public void setCodigoQr(String codigoQr) { this.codigoQr = codigoQr; }
-    public Long getOrganizadorId() { return organizadorId; }
-    public void setOrganizadorId(Long organizadorId) { this.organizadorId = organizadorId; }
 }
