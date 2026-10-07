@@ -33,6 +33,12 @@ public class LogService {
     public static final String ENTIDAD_INSCRIPCION = "INSCRIPCION";
     public static final String ENTIDAD_ASISTENCIA = "ASISTENCIA";
 
+    public static final String ACCION_CREAR_CATEGORIA = "CREAR_CATEGORIA";
+    public static final String ACCION_EDITAR_CATEGORIA = "EDITAR_CATEGORIA";
+    public static final String ACCION_ACTIVAR_CATEGORIA = "ACTIVAR_CATEGORIA";
+    public static final String ACCION_DESACTIVAR_CATEGORIA = "DESACTIVAR_CATEGORIA";
+    public static final String ENTIDAD_CATEGORIA = "CATEGORIA";
+    
     private static final Logger LOG = LoggerFactory.getLogger(LogService.class);
 
     private final LogRepository logRepository;
