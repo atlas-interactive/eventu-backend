@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -21,7 +22,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 
-/** Gestión de categorías de eventos. */
 @RestController
 @RequestMapping("/api/categorias")
 public class CategoriaController {
@@ -35,8 +35,7 @@ public class CategoriaController {
 
     /** Lista las categorías. Con {@code soloActivas=true} devuelve solo las que se pueden elegir al crear un evento */
     @GetMapping
-    public ResponseEntity<List<CategoriaResponseDTO>> obtenerCategorias(
-            @RequestParam(defaultValue = "false") boolean soloActivas) {
+    public ResponseEntity<List<CategoriaResponseDTO>> obtenerCategorias(@RequestParam(defaultValue = "false") boolean soloActivas) {
         return ResponseEntity.ok(categoriaService.listarCategorias(soloActivas));
     }
 
@@ -54,5 +53,17 @@ public class CategoriaController {
                                                                 @Valid @RequestBody CategoriaRequestDTO request,
                                                                 @AuthenticationPrincipal UsuarioAutenticado actual) {
         return ResponseEntity.ok(categoriaService.editarCategoria(id, request, actual.id()));
+    }
+
+    /** Desactiva una categoría (no la elimina). Solo necesita el id; no lleva cuerpo */
+    @PatchMapping("/{id}/desactivar")
+    public ResponseEntity<CategoriaResponseDTO> desactivarCategoria(@PathVariable Long id, @RequestParam Long administradorId) {
+        return ResponseEntity.ok(categoriaService.desactivarCategoria(id, administradorId));
+    }
+
+    /** Reactiva una categoría*/
+    @PatchMapping("/{id}/activar")
+    public ResponseEntity<CategoriaResponseDTO> activarCategoria(@PathVariable Long id, @RequestParam Long administradorId) {
+        return ResponseEntity.ok(categoriaService.activarCategoria(id, administradorId));
     }
 }

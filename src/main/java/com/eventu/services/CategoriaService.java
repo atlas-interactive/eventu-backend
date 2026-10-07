@@ -20,16 +20,18 @@ import java.util.List;
 public class CategoriaService {
 
     private static final String NOMBRE_DUPLICADO = "Ya existe una categoría con ese nombre.";
+    private static final String MOTIVO_NO_ADMINISTRADOR = "El usuario no es administrador";
 
     private final CategoriaRepository categoriaRepository;
     private final EventoRepository eventoRepository;
     private final AutorizacionService autorizacionService;
+    private final LogService logService;
 
-    public CategoriaService(CategoriaRepository categoriaRepository, EventoRepository eventoRepository,
-                            AutorizacionService autorizacionService) {
+    public CategoriaService(CategoriaRepository categoriaRepository, EventoRepository eventoRepository, AutorizacionService autorizacionService, LogService logService) {
         this.categoriaRepository = categoriaRepository;
         this.eventoRepository = eventoRepository;
         this.autorizacionService = autorizacionService;
+        this.logService = logService;
     }
 
     /**
@@ -49,19 +51,23 @@ public class CategoriaService {
      */
     @Transactional
     public CategoriaResponseDTO crearCategoria(CategoriaRequestDTO request, Long administradorId) {
-        autorizacionService.obtenerAdministrador(administradorId);
+        exigirAdministrador(administradorId, LogService.ACCION_CREAR_CATEGORIA, null);
         String nombre = request.getNombre().trim();
         if (categoriaRepository.existsByNombreIgnoreCase(nombre)) {
+            logService.registrarFallo(administradorId, LogService.ACCION_CREAR_CATEGORIA, LogService.ENTIDAD_CATEGORIA, null, NOMBRE_DUPLICADO);
             throw new ConflictoException(NOMBRE_DUPLICADO);
         }
         Categoria categoria = new Categoria();
         categoria.setNombre(nombre);
-        return aDto(categoriaRepository.save(categoria));
+        Categoria guardada = categoriaRepository.save(categoria);
+        logService.registrarExito(administradorId, LogService.ACCION_CREAR_CATEGORIA,
+                LogService.ENTIDAD_CATEGORIA, guardada.getId());
+        return aDto(guardada);
     }
 
     /**
-     * Cambia el nombre de una categoría y, si viene en la petición, la activa o desactiva
-     * Desactivar no la elimina: los eventos que ya la tienen conservan su categoría. Solo un administrador puede hacerlo
+     * Cambia el nombre de una categoría. Solo un administrador puede hacerlo
+     * El estado (activa/inactiva) no se toca aquí: para eso están {@link #desactivarCategoria} y {@link #activarCategoria}
      *
      * @throws AccesoDenegadoException si el usuario no es administrador
      * @throws RecursoNoEncontradoException si la categoría no existe
@@ -69,18 +75,62 @@ public class CategoriaService {
      */
     @Transactional
     public CategoriaResponseDTO editarCategoria(Long id, CategoriaRequestDTO request, Long administradorId) {
-        autorizacionService.obtenerAdministrador(administradorId);
-        Categoria categoria = categoriaRepository.findById(id)
-                .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.CATEGORIA_NO_ENCONTRADA));
+        exigirAdministrador(administradorId, LogService.ACCION_EDITAR_CATEGORIA, id);
+        Categoria categoria = buscarCategoria(id);
         String nombre = request.getNombre().trim();
         if (categoriaRepository.existsByNombreIgnoreCaseAndIdNot(nombre, id)) {
+            logService.registrarFallo(administradorId, LogService.ACCION_EDITAR_CATEGORIA, LogService.ENTIDAD_CATEGORIA, id, NOMBRE_DUPLICADO);
             throw new ConflictoException(NOMBRE_DUPLICADO);
         }
+
+        boolean cambiaNombre = !categoria.getNombre().equals(nombre);
         categoria.setNombre(nombre);
-        if (request.getActivo() != null) {
-            categoria.setActivo(request.getActivo());
+        Categoria guardada = categoriaRepository.save(categoria);
+        if (cambiaNombre) {
+            logService.registrarExito(administradorId, LogService.ACCION_EDITAR_CATEGORIA, LogService.ENTIDAD_CATEGORIA, id);
         }
-        return aDto(categoriaRepository.save(categoria));
+        return aDto(guardada);
+    }
+
+    /**
+     * Desactiva una categoría: deja de ofrecerse al crear eventos, pero no se elimina
+     * Los eventos que ya la tienen conservan su categoría. Si ya estaba inactiva no hace nada
+     */
+    @Transactional
+    public CategoriaResponseDTO desactivarCategoria(Long id, Long administradorId) {
+        return cambiarEstado(id, false, administradorId, LogService.ACCION_DESACTIVAR_CATEGORIA);
+    }
+
+    /** Reactiva una categoría para que vuelva a ofrecerse al crear eventos. Si ya estaba activa no hace nada */
+    @Transactional
+    public CategoriaResponseDTO activarCategoria(Long id, Long administradorId) {
+        return cambiarEstado(id, true, administradorId, LogService.ACCION_ACTIVAR_CATEGORIA);
+    }
+
+    private CategoriaResponseDTO cambiarEstado(Long id, boolean activo, Long administradorId, String accion) {
+        exigirAdministrador(administradorId, accion, id);
+        Categoria categoria = buscarCategoria(id);
+        if (Boolean.valueOf(activo).equals(categoria.getActivo())) {
+            return aDto(categoria);
+        }
+        categoria.setActivo(activo);
+        Categoria guardada = categoriaRepository.save(categoria);
+        logService.registrarExito(administradorId, accion, LogService.ENTIDAD_CATEGORIA, id);
+        return aDto(guardada);
+    }
+
+    private Categoria buscarCategoria(Long id) {
+        return categoriaRepository.findById(id).orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.CATEGORIA_NO_ENCONTRADA));
+    }
+
+    /** Exige rol ADMIN; si no lo tiene, deja el intento rechazado en el log antes de propagar la excepción */
+    private void exigirAdministrador(Long administradorId, String accion, Long categoriaId) {
+        try {
+            autorizacionService.obtenerAdministrador(administradorId);
+        } catch (AccesoDenegadoException e) {
+            logService.registrarFallo(administradorId, accion, LogService.ENTIDAD_CATEGORIA, categoriaId, MOTIVO_NO_ADMINISTRADOR);
+            throw e;
+        }
     }
 
     private CategoriaResponseDTO aDto(Categoria categoria) {
