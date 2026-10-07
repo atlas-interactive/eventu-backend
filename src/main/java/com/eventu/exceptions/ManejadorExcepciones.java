@@ -26,6 +26,12 @@ public class ManejadorExcepciones {
 
     private static final Logger LOG = LoggerFactory.getLogger(ManejadorExcepciones.class);
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> manejarAccesoDenegadoSpring(
+            org.springframework.security.access.AccessDeniedException ex) {
+        return responder(HttpStatus.FORBIDDEN, "No tiene permisos para esta acción.");
+    }
+
     @ExceptionHandler(RecursoNoEncontradoException.class)
     public ResponseEntity<Map<String, String>> manejarNoEncontrado(RecursoNoEncontradoException ex) {
         return responder(HttpStatus.NOT_FOUND, ex.getMessage());

@@ -9,6 +9,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.eventu.security.UsuarioAutenticado;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import java.util.Map;
 
 /** Registro de asistencia mediante código QR */
@@ -22,10 +26,10 @@ public class AsistenciaController {
         this.asistenciaService = asistenciaService;
     }
 
-    /** Valida un código QR y registra la asistencia */
     @PostMapping("/validar-qr")
-    public ResponseEntity<Map<String, Object>> registrarAsistencia(@Valid @RequestBody ValidacionQrRequestDTO request) {
-        return ResponseEntity.ok(
-                asistenciaService.registrarAsistenciaPorQr(request.getCodigoQr(), request.getOrganizadorId()));
+    @PreAuthorize("hasAnyRole('ORGANIZADOR','ADMIN')")
+    public ResponseEntity<Map<String, Object>> registrarAsistencia(@Valid @RequestBody ValidacionQrRequestDTO request,
+                                                                @AuthenticationPrincipal UsuarioAutenticado actual) {
+        return ResponseEntity.ok(asistenciaService.registrarAsistenciaPorQr(request.getCodigoQr(), actual.id()));
     }
 }
