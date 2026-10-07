@@ -20,16 +20,18 @@ import java.util.List;
 public class CategoriaService {
 
     private static final String NOMBRE_DUPLICADO = "Ya existe una categoría con ese nombre.";
+    private static final String MOTIVO_NO_ADMINISTRADOR = "El usuario no es administrador";
 
     private final CategoriaRepository categoriaRepository;
     private final EventoRepository eventoRepository;
     private final AutorizacionService autorizacionService;
+    private final LogService logService;
 
-    public CategoriaService(CategoriaRepository categoriaRepository, EventoRepository eventoRepository,
-                            AutorizacionService autorizacionService) {
+    public CategoriaService(CategoriaRepository categoriaRepository, EventoRepository eventoRepository, AutorizacionService autorizacionService, LogService logService) {
         this.categoriaRepository = categoriaRepository;
         this.eventoRepository = eventoRepository;
         this.autorizacionService = autorizacionService;
+        this.logService = logService;
     }
 
     /**
@@ -49,14 +51,18 @@ public class CategoriaService {
      */
     @Transactional
     public CategoriaResponseDTO crearCategoria(CategoriaRequestDTO request, Long administradorId) {
-        autorizacionService.obtenerAdministrador(administradorId);
+        exigirAdministrador(administradorId, LogService.ACCION_CREAR_CATEGORIA, null);
         String nombre = request.getNombre().trim();
         if (categoriaRepository.existsByNombreIgnoreCase(nombre)) {
+            logService.registrarFallo(administradorId, LogService.ACCION_CREAR_CATEGORIA,
+                    LogService.ENTIDAD_CATEGORIA, null, NOMBRE_DUPLICADO);
             throw new ConflictoException(NOMBRE_DUPLICADO);
         }
         Categoria categoria = new Categoria();
         categoria.setNombre(nombre);
-        return aDto(categoriaRepository.save(categoria));
+        Categoria guardada = categoriaRepository.save(categoria);
+        logService.registrarExito(administradorId, LogService.ACCION_CREAR_CATEGORIA, LogService.ENTIDAD_CATEGORIA, guardada.getId());
+        return aDto(guardada);
     }
 
     /**
@@ -69,18 +75,43 @@ public class CategoriaService {
      */
     @Transactional
     public CategoriaResponseDTO editarCategoria(Long id, CategoriaRequestDTO request, Long administradorId) {
-        autorizacionService.obtenerAdministrador(administradorId);
+        exigirAdministrador(administradorId, LogService.ACCION_EDITAR_CATEGORIA, id);
         Categoria categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.CATEGORIA_NO_ENCONTRADA));
         String nombre = request.getNombre().trim();
         if (categoriaRepository.existsByNombreIgnoreCaseAndIdNot(nombre, id)) {
+            logService.registrarFallo(administradorId, LogService.ACCION_EDITAR_CATEGORIA, LogService.ENTIDAD_CATEGORIA, id, NOMBRE_DUPLICADO);
             throw new ConflictoException(NOMBRE_DUPLICADO);
         }
+
+        Boolean nuevoActivo = request.getActivo();
+        boolean cambiaNombre = !categoria.getNombre().equals(nombre);
+        boolean cambiaEstado = nuevoActivo != null && !nuevoActivo.equals(categoria.getActivo());
+
         categoria.setNombre(nombre);
-        if (request.getActivo() != null) {
-            categoria.setActivo(request.getActivo());
+        if (nuevoActivo != null) {
+            categoria.setActivo(nuevoActivo);
         }
-        return aDto(categoriaRepository.save(categoria));
+        Categoria guardada = categoriaRepository.save(categoria);
+
+        if (cambiaNombre) {
+            logService.registrarExito(administradorId, LogService.ACCION_EDITAR_CATEGORIA, LogService.ENTIDAD_CATEGORIA, id);
+        }
+        if (cambiaEstado) {
+            String accion = nuevoActivo ? LogService.ACCION_ACTIVAR_CATEGORIA : LogService.ACCION_DESACTIVAR_CATEGORIA;
+            logService.registrarExito(administradorId, accion, LogService.ENTIDAD_CATEGORIA, id);
+        }
+        return aDto(guardada);
+    }
+
+    /** Exige rol ADMIN; si no lo tiene, deja el intento rechazado en el log antes de propagar la excepción */
+    private void exigirAdministrador(Long administradorId, String accion, Long categoriaId) {
+        try {
+            autorizacionService.obtenerAdministrador(administradorId);
+        } catch (AccesoDenegadoException e) {
+            logService.registrarFallo(administradorId, accion, LogService.ENTIDAD_CATEGORIA, categoriaId, MOTIVO_NO_ADMINISTRADOR);
+            throw e;
+        }
     }
 
     private CategoriaResponseDTO aDto(Categoria categoria) {
