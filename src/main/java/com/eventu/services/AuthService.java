@@ -28,12 +28,16 @@ public class AuthService {
      * Registra una cuenta nueva. Toda cuenta nace con rol USUARIO; el rol de organizador lo asigna después un administrador (HU-03).
      * @param request datos ya validados (correo institucional, contraseña de 8 a 72 caracteres)
      * @return el usuario guardado
-     * @throws ConflictoException si el correo ya está registrado
+     * @throws ConflictoException si el correo ya está registrado o pertenece a una cuenta desactivada
      */
     @Transactional
     public Usuario registrarUsuario(RegistroRequestDTO request) {
         String correo = normalizarCorreo(request.getCorreo());
-        if (usuarioRepository.existsByCorreoIgnoreCase(correo)) {
+        Usuario existente = usuarioRepository.findByCorreoIgnoreCase(correo).orElse(null);
+        if (existente != null) {
+            if (Boolean.FALSE.equals(existente.getActivo())) {
+                throw new ConflictoException("Este correo pertenece a una cuenta desactivada. Inicia sesión para reactivarla.");
+            }
             throw new ConflictoException("El correo ya se encuentra registrado.");
         }
 
