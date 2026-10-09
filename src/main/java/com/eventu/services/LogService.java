@@ -42,6 +42,9 @@ public class LogService {
 
     public static final String ACCION_ASIGNAR_ORGANIZADOR = "ASIGNAR_ORGANIZADOR";
     public static final String ACCION_REVOCAR_ORGANIZADOR = "REVOCAR_ORGANIZADOR";
+
+    public static final String ACCION_DESACTIVAR_CUENTA = "DESACTIVAR_CUENTA";
+    public static final String ACCION_REACTIVAR_CUENTA = "REACTIVAR_CUENTA";
     
     private static final Logger LOG = LoggerFactory.getLogger(LogService.class);
 

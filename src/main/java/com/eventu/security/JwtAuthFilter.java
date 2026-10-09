@@ -33,8 +33,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain chain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         String cabecera = request.getHeader("Authorization");
 
         if (cabecera != null && cabecera.startsWith(PREFIJO)) {
@@ -42,10 +41,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.validarYObtenerClaims(cabecera.substring(PREFIJO.length()));
                 Long id = Long.valueOf(claims.getSubject());
 
-                usuarioRepository.findById(id).ifPresent(u -> {
+                usuarioRepository.findById(id).filter(u -> !Boolean.FALSE.equals(u.getActivo())).ifPresent(u -> {
                     var principal = new UsuarioAutenticado(u.getId(), u.getCorreo(), u.getRol());
-                    var auth = new UsernamePasswordAuthenticationToken(principal, null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + u.getRol().name())));
+                    var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + u.getRol().name())));
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 });
             } catch (JwtException | IllegalArgumentException e) {
@@ -54,4 +52,5 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
         chain.doFilter(request, response);
     }
+
 }

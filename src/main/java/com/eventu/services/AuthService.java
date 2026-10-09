@@ -28,12 +28,16 @@ public class AuthService {
      * Registra una cuenta nueva. Toda cuenta nace con rol USUARIO; el rol de organizador lo asigna después un administrador (HU-03).
      * @param request datos ya validados (correo institucional, contraseña de 8 a 72 caracteres)
      * @return el usuario guardado
-     * @throws ConflictoException si el correo ya está registrado
+     * @throws ConflictoException si el correo ya está registrado o pertenece a una cuenta desactivada
      */
     @Transactional
     public Usuario registrarUsuario(RegistroRequestDTO request) {
         String correo = normalizarCorreo(request.getCorreo());
-        if (usuarioRepository.existsByCorreoIgnoreCase(correo)) {
+        Usuario existente = usuarioRepository.findByCorreoIgnoreCase(correo).orElse(null);
+        if (existente != null) {
+            if (Boolean.FALSE.equals(existente.getActivo())) {
+                throw new ConflictoException("Este correo pertenece a una cuenta desactivada. Inicia sesión para reactivarla.");
+            }
             throw new ConflictoException("El correo ya se encuentra registrado.");
         }
 
@@ -49,19 +53,26 @@ public class AuthService {
     }
 
     /**
-     * Valida las credenciales de un usuario.
+     * Valida las credenciales de un usuario. Si la cuenta estaba desactivada y las credenciales son correctas, la reactiva
      *
      * @throws CredencialesInvalidasException si el correo o la contraseña no coinciden
      */
+    @Transactional
     public Usuario autenticar(String correo, String password) {
         Usuario usuario = usuarioRepository.findByCorreoIgnoreCase(normalizarCorreo(correo)).orElse(null);
         Long usuarioId = usuario == null ? null : usuario.getId();
 
         // Mismo mensaje para correo inexistente y contraseña errónea, para no revelar qué cuentas existen
         if (usuario == null || !passwordEncoder.matches(password, usuario.getPasswordHash())) {
-            logService.registrarFallo(usuarioId, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, usuarioId,
-                    "Credenciales inválidas");
+            logService.registrarFallo(usuarioId, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, usuarioId, "Credenciales inválidas");
             throw new CredencialesInvalidasException("Correo o contraseña incorrectos.");
+        }
+
+        // Solo llega aquí quien demostró ser el dueño de la cuenta (contraseña correcta)
+        if (Boolean.FALSE.equals(usuario.getActivo())) {
+            usuario.setActivo(true);
+            usuarioRepository.save(usuario);
+            logService.registrarExito(usuarioId, LogService.ACCION_REACTIVAR_CUENTA, LogService.ENTIDAD_USUARIO, usuarioId);
         }
 
         logService.registrarExito(usuarioId, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, usuarioId);
