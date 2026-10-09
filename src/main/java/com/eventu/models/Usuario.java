@@ -1,7 +1,16 @@
 package com.eventu.models;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "usuarios") 
@@ -26,6 +35,9 @@ public class Usuario {
 
     @Column(name = "creado_en", updatable = false)
     private LocalDateTime creadoEn;
+
+    @Column(nullable = false)
+    private Boolean activo = true;
 
     @PrePersist
     protected void onCreate() {
@@ -53,6 +65,8 @@ public class Usuario {
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
 
+    public Boolean getActivo() { return activo; }
+    public void setActivo(Boolean activo) { this.activo = activo; }
 
     public String getCodigoInstitucional() { return codigoInstitucional; }
     public void setCodigoInstitucional(String codigoInstitucional) { this.codigoInstitucional = codigoInstitucional; }
