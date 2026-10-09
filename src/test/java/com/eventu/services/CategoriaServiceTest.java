@@ -80,7 +80,7 @@ class CategoriaServiceTest {
                 eq(LogService.ENTIDAD_CATEGORIA), isNull(), anyString());
     }
 
-    //Escenario 2: editar el nombre
+    // Escenario 2: editar el nombre
 
     @Test
     void editar_conNuevoNombreDisponible_actualizaElNombre() {
@@ -117,7 +117,7 @@ class CategoriaServiceTest {
         verify(categoriaRepository, never()).save(any());
     }
 
-    //Escenario 3: desactivar y reactivar (solo con el id)
+    // Escenario 3: desactivar y reactivar (solo con el id)
 
     @Test
     void desactivar_categoriaConEventosActivos_laMarcaInactivaSinEliminarlaNiTocarLosEventos() {
@@ -210,6 +210,18 @@ class CategoriaServiceTest {
     }
 
     @Test
+    void activar_siElUsuarioNoEsAdministrador_lanzaAccesoDenegadoYRegistraElIntento() {
+        doThrow(new AccesoDenegadoException("Solo un administrador puede realizar esta acción."))
+                .when(autorizacionService).obtenerAdministrador(USUARIO_ID);
+
+        assertThrows(AccesoDenegadoException.class, () -> servicio.activarCategoria(5L, USUARIO_ID));
+
+        verifyNoInteractions(categoriaRepository);
+        verify(logService).registrarFallo(eq(USUARIO_ID), eq(LogService.ACCION_ACTIVAR_CATEGORIA),
+                eq(LogService.ENTIDAD_CATEGORIA), eq(5L), anyString());
+    }
+
+    @Test
     void editar_siElUsuarioNoEsAdministrador_lanzaAccesoDenegadoYNoModificaNada() {
         doThrow(new AccesoDenegadoException("Solo un administrador puede realizar esta acción."))
                 .when(autorizacionService).obtenerAdministrador(USUARIO_ID);
@@ -246,7 +258,7 @@ class CategoriaServiceTest {
         verify(categoriaRepository, never()).findByActivoTrue();
     }
 
-    // Utilidades 
+    // Utilidades
 
     private static CategoriaRequestDTO solicitud(String nombre) {
         CategoriaRequestDTO request = new CategoriaRequestDTO();
