@@ -44,9 +44,6 @@ public class Usuario {
         this.creadoEn = LocalDateTime.now();
     }
 
-    @Column(name = "codigo_institucional", length = 20)
-    private String codigoInstitucional;
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -67,7 +64,4 @@ public class Usuario {
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
-
-    public String getCodigoInstitucional() { return codigoInstitucional; }
-    public void setCodigoInstitucional(String codigoInstitucional) { this.codigoInstitucional = codigoInstitucional; }
 }
