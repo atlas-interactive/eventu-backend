@@ -33,9 +33,6 @@ public class Evento {
     @Column(nullable = false, length = 20)
     private EstadoEvento estado = EstadoEvento.PUBLICADO;
 
-    @Column(nullable = false, columnDefinition = "boolean default false")
-    private Boolean certificable = false;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizador_id", nullable = false)
     private Usuario organizador;
@@ -75,9 +72,6 @@ public class Evento {
 
     public EstadoEvento getEstado() { return estado; }
     public void setEstado(EstadoEvento estado) { this.estado = estado; }
-
-    public Boolean getCertificable() { return certificable; }
-    public void setCertificable(Boolean certificable) { this.certificable = certificable; }
 
     public Usuario getOrganizador() { return organizador; }
     public void setOrganizador(Usuario organizador) { this.organizador = organizador; }

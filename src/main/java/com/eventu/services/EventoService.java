@@ -55,7 +55,6 @@ public class EventoService {
         nuevoEvento.setUbicacion(request.getUbicacion().trim());
         nuevoEvento.setCuposMaximos(request.getCuposMaximos());
         nuevoEvento.setCuposDisponibles(request.getCuposMaximos());
-        nuevoEvento.setCertificable(Boolean.TRUE.equals(request.getCertificable()));
         nuevoEvento.setEstado(EstadoEvento.PUBLICADO);
         nuevoEvento.setOrganizador(organizador);
         nuevoEvento.setCategoria(categoria);
@@ -108,7 +107,6 @@ public class EventoService {
         if (request.getDescripcion() != null) evento.setDescripcion(request.getDescripcion().trim());
         if (request.getFechaInicio() != null) evento.setFechaInicio(request.getFechaInicio());
         if (request.getUbicacion() != null) evento.setUbicacion(request.getUbicacion().trim());
-        if (request.getCertificable() != null) evento.setCertificable(request.getCertificable());
 
         if (request.getCuposMaximos() != null) {
             int inscritos = evento.getCuposMaximos() - evento.getCuposDisponibles();

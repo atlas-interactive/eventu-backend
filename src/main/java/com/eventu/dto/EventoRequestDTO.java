@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 
-/** Datos para crear un evento. Todos los campos son obligatorios excepto "certificable" */
+/** Datos para crear un evento. Todos los campos son obligatorios */
 public class EventoRequestDTO {
 
     @NotBlank(message = "El título es obligatorio.")
@@ -30,8 +30,6 @@ public class EventoRequestDTO {
     @Min(value = 1, message = "El cupo máximo debe ser mayor a cero.")
     private Integer cuposMaximos;
 
-    private Boolean certificable;
-
     @NotNull(message = "La categoría es obligatoria.")
     private Long categoriaId;
 
@@ -45,8 +43,6 @@ public class EventoRequestDTO {
     public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
     public Integer getCuposMaximos() { return cuposMaximos; }
     public void setCuposMaximos(Integer cuposMaximos) { this.cuposMaximos = cuposMaximos; }
-    public Boolean getCertificable() { return certificable; }
-    public void setCertificable(Boolean certificable) { this.certificable = certificable; }
     public Long getCategoriaId() { return categoriaId; }
     public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }
 }

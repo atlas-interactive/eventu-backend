@@ -29,8 +29,6 @@ public class EventoActualizacionRequestDTO {
     @Min(value = 1, message = "El cupo máximo debe ser mayor a cero.")
     private Integer cuposMaximos;
 
-    private Boolean certificable;
-
     private Long categoriaId;
 
     public String getTitulo() { return titulo; }
@@ -43,8 +41,6 @@ public class EventoActualizacionRequestDTO {
     public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
     public Integer getCuposMaximos() { return cuposMaximos; }
     public void setCuposMaximos(Integer cuposMaximos) { this.cuposMaximos = cuposMaximos; }
-    public Boolean getCertificable() { return certificable; }
-    public void setCertificable(Boolean certificable) { this.certificable = certificable; }
     public Long getCategoriaId() { return categoriaId; }
     public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }
 }
