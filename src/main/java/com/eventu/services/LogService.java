@@ -1,7 +1,5 @@
 package com.eventu.services;
 
-import com.eventu.models.Log;
-import com.eventu.repositories.LogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -9,6 +7,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+
+import com.eventu.models.Log;
+import com.eventu.repositories.LogRepository;
 
 /**
  * Registra en la tabla "logs" las operaciones críticas del sistema:
@@ -38,6 +39,9 @@ public class LogService {
     public static final String ACCION_ACTIVAR_CATEGORIA = "ACTIVAR_CATEGORIA";
     public static final String ACCION_DESACTIVAR_CATEGORIA = "DESACTIVAR_CATEGORIA";
     public static final String ENTIDAD_CATEGORIA = "CATEGORIA";
+
+    public static final String ACCION_ASIGNAR_ORGANIZADOR = "ASIGNAR_ORGANIZADOR";
+    public static final String ACCION_REVOCAR_ORGANIZADOR = "REVOCAR_ORGANIZADOR";
     
     private static final Logger LOG = LoggerFactory.getLogger(LogService.class);
 
