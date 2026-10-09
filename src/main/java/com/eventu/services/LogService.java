@@ -25,14 +25,9 @@ public class LogService {
     public static final String ACCION_LOGIN = "LOGIN";
     public static final String ACCION_CREAR_EVENTO = "CREAR_EVENTO";
     public static final String ACCION_EDITAR_EVENTO = "EDITAR_EVENTO";
-    public static final String ACCION_INSCRIBIR = "INSCRIBIR";
-    public static final String ACCION_CANCELAR_INSCRIPCION = "CANCELAR_INSCRIPCION";
-    public static final String ACCION_REGISTRAR_ASISTENCIA = "REGISTRAR_ASISTENCIA";
 
     public static final String ENTIDAD_USUARIO = "USUARIO";
     public static final String ENTIDAD_EVENTO = "EVENTO";
-    public static final String ENTIDAD_INSCRIPCION = "INSCRIPCION";
-    public static final String ENTIDAD_ASISTENCIA = "ASISTENCIA";
 
     public static final String ACCION_CREAR_CATEGORIA = "CREAR_CATEGORIA";
     public static final String ACCION_EDITAR_CATEGORIA = "EDITAR_CATEGORIA";
@@ -43,7 +38,6 @@ public class LogService {
     public static final String ACCION_ASIGNAR_ORGANIZADOR = "ASIGNAR_ORGANIZADOR";
     public static final String ACCION_REVOCAR_ORGANIZADOR = "REVOCAR_ORGANIZADOR";
 
-    public static final String ACCION_DESACTIVAR_CUENTA = "DESACTIVAR_CUENTA";
     public static final String ACCION_REACTIVAR_CUENTA = "REACTIVAR_CUENTA";
     
     private static final Logger LOG = LoggerFactory.getLogger(LogService.class);
