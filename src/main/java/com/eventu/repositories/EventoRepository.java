@@ -24,7 +24,7 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
 
     /**
      * Busca el evento bloqueando su fila hasta que termine la transacción.
-     * Se usa al cambiar los cupos para que dos inscripciones simultáneas no ocupen el mismo cupo.
+     * Se usa al editar los cupos para que dos ediciones simultáneas no pisen el mismo cupo.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT e FROM Evento e WHERE e.id = :id")

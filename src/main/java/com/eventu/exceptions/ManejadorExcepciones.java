@@ -83,8 +83,7 @@ public class ManejadorExcepciones {
         return responder(HttpStatus.BAD_REQUEST, "El valor del parámetro '" + ex.getName() + "' no es válido.");
     }
 
-    /** Red de seguridad: restricciones de la base de datos (por ejemplo, dos inscripciones simultáneas) */
-    @ExceptionHandler(DataIntegrityViolationException.class)
+  /** Red de seguridad: restricciones de la base de datos (por ejemplo, dos registros simultáneos con el mismo correo) */    @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> manejarIntegridadDatos(DataIntegrityViolationException ex) {
         LOG.warn("Restricción de base de datos violada", ex);
         return responder(HttpStatus.CONFLICT, "La operación no se pudo completar porque ya existe un registro igual o un dato no es válido.");

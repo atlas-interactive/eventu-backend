@@ -80,18 +80,15 @@ public class EventoService {
     @Transactional
     public Evento actualizarEvento(Long eventoId, EventoActualizacionRequestDTO request, Long organizadorId) {
         Usuario gestor = autorizacionService.obtenerGestorDeEventos(organizadorId);
-        // Se bloquea la fila para que una inscripción simultánea no desajuste los cupos
-        Evento evento = eventoRepository.buscarPorIdConBloqueo(eventoId)
-                .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));
+          // Se bloquea la fila para que dos ediciones simultáneas no desajusten los cupos
+        Evento evento = eventoRepository.buscarPorIdConBloqueo(eventoId).orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));
 
         if (!autorizacionService.puedeModificarEvento(gestor, evento)) {
-            logService.registrarFallo(organizadorId, LogService.ACCION_EDITAR_EVENTO, LogService.ENTIDAD_EVENTO,
-                    eventoId, "Intento de editar un evento ajeno");
+            logService.registrarFallo(organizadorId, LogService.ACCION_EDITAR_EVENTO, LogService.ENTIDAD_EVENTO, eventoId, "Intento de editar un evento ajeno");
             throw new AccesoDenegadoException(Mensajes.EVENTO_AJENO);
         }
         if (evento.getEstado() == EstadoEvento.CANCELADO) {
-            logService.registrarFallo(organizadorId, LogService.ACCION_EDITAR_EVENTO, LogService.ENTIDAD_EVENTO,
-                    eventoId, "Evento cancelado");
+            logService.registrarFallo(organizadorId, LogService.ACCION_EDITAR_EVENTO, LogService.ENTIDAD_EVENTO, eventoId, "Evento cancelado");
             throw new ConflictoException("No se puede editar un evento cancelado.");
         }
 
@@ -129,8 +126,7 @@ public class EventoService {
     }
 
     private Categoria buscarCategoria(Long categoriaId) {
-        return categoriaRepository.findById(categoriaId)
-                .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.CATEGORIA_NO_ENCONTRADA));
+        return categoriaRepository.findById(categoriaId).orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.CATEGORIA_NO_ENCONTRADA));
     }
 
     /** Una categoría inactiva no se ofrece al crear eventos nuevos*/
