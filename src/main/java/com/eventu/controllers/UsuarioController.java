@@ -17,7 +17,7 @@ import com.eventu.dto.UsuarioResponseDTO;
 import com.eventu.security.UsuarioAutenticado;
 import com.eventu.services.UsuarioService;
 
-/** Gestión del rol de organizador. Solo para administradores (HU-03) */
+/** Gestión del rol de organizador. Solo para administradores*/
 @RestController
 @RequestMapping("/api/usuarios")
 @PreAuthorize("hasRole('ADMIN')")
@@ -29,14 +29,35 @@ public class UsuarioController {
         this.usuarioService = usuarioService;
     }
 
+    /**
+     * Busca usuarios por nombre o correo
+     *
+     * @param criterio texto a buscar
+     * @return 200 con los usuarios que coinciden; 404 si ninguno; 400 si el criterio está vacío
+     */
     @GetMapping
     public ResponseEntity<List<UsuarioResponseDTO>> buscarUsuarios(@RequestParam String criterio) {
         return ResponseEntity.ok(usuarioService.buscarUsuarios(criterio));
     }
 
+    /**
+     * Lista los organizadores actuales
+     *
+     * @return 200 con la lista (vacía si no hay organizadores)
+     */
+    @GetMapping("/organizadores")
+    public ResponseEntity<List<UsuarioResponseDTO>> listarOrganizadores() {
+        return ResponseEntity.ok(usuarioService.listarOrganizadores());
+    }
+
+    /**
+     * Asigna el rol de organizador a un usuario
+     *
+     * @param id usuario que recibirá el rol
+     * @return 200 con el mensaje, el id y el nuevo rol; 404 si no existe; 409 si ya es organizador
+     */
     @PutMapping("/{id}/asignar-organizador")
-    public ResponseEntity<Map<String, Object>> asignarOrganizador(@PathVariable Long id,
-                                                                  @AuthenticationPrincipal UsuarioAutenticado actual) {
+    public ResponseEntity<Map<String, Object>> asignarOrganizador(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado actual) {
         UsuarioResponseDTO usuario = usuarioService.asignarOrganizador(id, actual.id());
         return ResponseEntity.ok(Map.<String, Object>of(
                 "mensaje", "Rol de organizador asignado exitosamente.",
@@ -44,9 +65,14 @@ public class UsuarioController {
                 "rol", usuario.rol()));
     }
 
+    /**
+     * Revoca el rol de organizador de un usuario; conserva su cuenta y sus eventos
+     *
+     * @param id usuario al que se le quita el rol
+     * @return 200 con el mensaje, el id y el nuevo rol; 404 si no existe; 409 si no es organizador
+     */
     @PutMapping("/{id}/revocar-organizador")
-    public ResponseEntity<Map<String, Object>> revocarOrganizador(@PathVariable Long id,
-                                                                  @AuthenticationPrincipal UsuarioAutenticado actual) {
+    public ResponseEntity<Map<String, Object>> revocarOrganizador(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado actual) {
         UsuarioResponseDTO usuario = usuarioService.revocarOrganizador(id, actual.id());
         return ResponseEntity.ok(Map.<String, Object>of(
                 "mensaje", "Rol de organizador revocado exitosamente.",
