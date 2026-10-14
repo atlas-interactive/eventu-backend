@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 public class RegistroRequestDTO {
 
     /** Solo correos del dominio institucional, sin distinguir mayúsculas */
-    public static final String REGEX_CORREO_INSTITUCIONAL = "(?i)^[a-z0-9._%+-]+@unillanos\\.edu\\.co$";
+    private static final String REGEX_CORREO_INSTITUCIONAL = "(?i)^[a-z0-9._%+-]+@unillanos\\.edu\\.co$";
 
     @NotBlank(message = "El nombre es obligatorio.")
     @Size(max = 100, message = "El nombre no puede superar los 100 caracteres.")
