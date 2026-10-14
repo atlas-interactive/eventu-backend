@@ -7,6 +7,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -26,10 +27,10 @@ public class ManejadorExcepciones {
 
     private static final Logger LOG = LoggerFactory.getLogger(ManejadorExcepciones.class);
 
-    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
-    public ResponseEntity<Map<String, String>> manejarAccesoDenegadoSpring(
-            org.springframework.security.access.AccessDeniedException ex) {
-        return responder(HttpStatus.FORBIDDEN, "No tiene permisos para esta acción.");
+    /** Rechazos de {@code @PreAuthorize} (rol insuficiente); los de la lógica de negocio son {@link AccesoDenegadoException} */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> manejarAccesoDenegadoSpring(AccessDeniedException ex) {
+        return responder(HttpStatus.FORBIDDEN, Mensajes.SIN_PERMISO_ACCION);
     }
 
     @ExceptionHandler(RecursoNoEncontradoException.class)
@@ -83,7 +84,8 @@ public class ManejadorExcepciones {
         return responder(HttpStatus.BAD_REQUEST, "El valor del parámetro '" + ex.getName() + "' no es válido.");
     }
 
-  /** Red de seguridad: restricciones de la base de datos (por ejemplo, dos registros simultáneos con el mismo correo) */    @ExceptionHandler(DataIntegrityViolationException.class)
+    /** Red de seguridad: restricciones de la base de datos (por ejemplo, dos registros simultáneos con el mismo correo) */
+    @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> manejarIntegridadDatos(DataIntegrityViolationException ex) {
         LOG.warn("Restricción de base de datos violada", ex);
         return responder(HttpStatus.CONFLICT, "La operación no se pudo completar porque ya existe un registro igual o un dato no es válido.");
@@ -103,6 +105,7 @@ public class ManejadorExcepciones {
         return responder(HttpStatus.INTERNAL_SERVER_ERROR, Mensajes.ERROR_INTERNO);
     }
 
+    /** Mensaje en español para los errores HTTP propios de Spring MVC */
     private static String mensajeParaCodigo(int codigo) {
         return switch (codigo) {
             case 404 -> "El recurso solicitado no existe.";
@@ -112,6 +115,7 @@ public class ManejadorExcepciones {
         };
     }
 
+    /** Arma la respuesta de error con la forma {@code {"error": "mensaje"}} */
     private static ResponseEntity<Map<String, String>> responder(HttpStatus estado, String mensaje) {
         String texto = mensaje == null ? Mensajes.ERROR_INTERNO : mensaje;
         return ResponseEntity.status(estado).body(Map.of("error", texto));

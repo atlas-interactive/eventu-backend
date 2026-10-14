@@ -5,7 +5,7 @@ import com.eventu.models.Evento;
 
 import java.time.LocalDateTime;
 
-/** Vista pública de un evento: no incluye datos privados del organizador */
+/** Vista pública de un evento, no incluye datos privados del organizador */
 public record EventoResponseDTO(
         Long id,
         String titulo,

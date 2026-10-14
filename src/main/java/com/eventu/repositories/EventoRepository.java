@@ -12,12 +12,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** Acceso a los datos de la tabla "eventos" */
 @Repository
 public interface EventoRepository extends JpaRepository<Evento, Long> {
 
     List<Evento> findByEstado(EstadoEvento estado);
-
-    List<Evento> findByOrganizadorId(Long organizadorId);
 
     /** Cuenta los eventos de una categoría en un estado dado (por ejemplo, los publicados) */
     long countByCategoriaIdAndEstado(Long categoriaId, EstadoEvento estado);

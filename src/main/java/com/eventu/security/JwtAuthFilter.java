@@ -7,17 +7,21 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Lee el token JWT del encabezado Authorization y, si es válido y la cuenta está activa,
+ * deja al usuario autenticado para el resto de la petición. 
+ */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -41,10 +45,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.validarYObtenerClaims(cabecera.substring(PREFIJO.length()));
                 Long id = Long.valueOf(claims.getSubject());
 
-                usuarioRepository.findById(id).filter(u -> !Boolean.FALSE.equals(u.getActivo())).ifPresent(u -> {
-                    var principal = new UsuarioAutenticado(u.getId(), u.getCorreo(), u.getRol());
-                    var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + u.getRol().name())));
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+                usuarioRepository.findById(id).filter(usuario -> !Boolean.FALSE.equals(usuario.getActivo())).ifPresent(usuario -> {
+                    var principal = new UsuarioAutenticado(usuario.getId(), usuario.getCorreo(), usuario.getRol());
+                    var autenticacion = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name())));
+                    SecurityContextHolder.getContext().setAuthentication(autenticacion);
                 });
             } catch (JwtException | IllegalArgumentException e) {
                 LOG.warn("Token JWT rechazado en {} {}: {}", request.getMethod(), request.getRequestURI(), e.getClass().getSimpleName());
@@ -52,5 +56,4 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
         chain.doFilter(request, response);
     }
-
 }

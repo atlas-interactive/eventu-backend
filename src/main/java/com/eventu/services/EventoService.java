@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/** Creación, edición y consulta de eventos*/
+/** Creación, edición y consulta de eventos */
 @Service
 public class EventoService {
 
@@ -80,7 +80,7 @@ public class EventoService {
     @Transactional
     public Evento actualizarEvento(Long eventoId, EventoActualizacionRequestDTO request, Long organizadorId) {
         Usuario gestor = autorizacionService.obtenerGestorDeEventos(organizadorId);
-          // Se bloquea la fila para que dos ediciones simultáneas no desajusten los cupos
+        // Se bloquea la fila para que dos ediciones simultáneas no desajusten los cupos
         Evento evento = eventoRepository.buscarPorIdConBloqueo(eventoId).orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));
 
         if (!autorizacionService.puedeModificarEvento(gestor, evento)) {
@@ -99,11 +99,23 @@ public class EventoService {
         return guardado;
     }
 
+    /**
+     * Copia al evento solo los campos que vienen en la petición.
+     * Al cambiar el cupo máximo conserva el número de inscritos y recalcula los cupos disponibles
+     */
     private void aplicarCambios(Evento evento, EventoActualizacionRequestDTO request) {
-        if (request.getTitulo() != null) evento.setTitulo(request.getTitulo().trim());
-        if (request.getDescripcion() != null) evento.setDescripcion(request.getDescripcion().trim());
-        if (request.getFechaInicio() != null) evento.setFechaInicio(request.getFechaInicio());
-        if (request.getUbicacion() != null) evento.setUbicacion(request.getUbicacion().trim());
+        if (request.getTitulo() != null) {
+            evento.setTitulo(request.getTitulo().trim());
+        }
+        if (request.getDescripcion() != null) {
+            evento.setDescripcion(request.getDescripcion().trim());
+        }
+        if (request.getFechaInicio() != null) {
+            evento.setFechaInicio(request.getFechaInicio());
+        }
+        if (request.getUbicacion() != null) {
+            evento.setUbicacion(request.getUbicacion().trim());
+        }
 
         if (request.getCuposMaximos() != null) {
             int inscritos = evento.getCuposMaximos() - evento.getCuposDisponibles();
@@ -125,11 +137,12 @@ public class EventoService {
         }
     }
 
+    /** @throws RecursoNoEncontradoException si la categoría no existe */
     private Categoria buscarCategoria(Long categoriaId) {
         return categoriaRepository.findById(categoriaId).orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.CATEGORIA_NO_ENCONTRADA));
     }
 
-    /** Una categoría inactiva no se ofrece al crear eventos nuevos*/
+    /** Una categoría inactiva no se ofrece al crear eventos nuevos */
     private Categoria buscarCategoriaActiva(Long categoriaId) {
         Categoria categoria = buscarCategoria(categoriaId);
         if (!Boolean.TRUE.equals(categoria.getActivo())) {

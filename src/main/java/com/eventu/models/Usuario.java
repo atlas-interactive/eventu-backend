@@ -1,7 +1,5 @@
 package com.eventu.models;
 
-import java.time.LocalDateTime;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,12 +10,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
+
+/** Cuenta de una persona en EventU. Se desactiva, nunca se elimina */
+
 @Entity
-@Table(name = "usuarios") 
+@Table(name = "usuarios")
 public class Usuario {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 100)
@@ -39,6 +41,7 @@ public class Usuario {
     @Column(nullable = false)
     private Boolean activo = true;
 
+    /** Guarda la fecha de creación al insertar el registro por primera vez */
     @PrePersist
     protected void onCreate() {
         this.creadoEn = LocalDateTime.now();
