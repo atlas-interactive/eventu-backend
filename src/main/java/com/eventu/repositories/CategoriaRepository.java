@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/** Acceso a los datos de la tabla "categorias" */
 @Repository
 public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
 

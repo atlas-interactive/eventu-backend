@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Datos para registrar una cuenta nueva*/
+/** Datos para registrar una cuenta nueva */
 public class RegistroRequestDTO {
 
     /** Solo correos del dominio institucional, sin distinguir mayúsculas */

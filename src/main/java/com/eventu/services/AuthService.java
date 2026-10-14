@@ -79,6 +79,7 @@ public class AuthService {
         return usuario;
     }
 
+    /** Los correos se guardan y se comparan en minúsculas y sin espacios en los extremos */
     private String normalizarCorreo(String correo) {
         return correo.trim().toLowerCase();
     }

@@ -1,8 +1,8 @@
 package com.eventu.controllers;
 
-import java.util.List;
-import java.util.Map;
-
+import com.eventu.dto.UsuarioResponseDTO;
+import com.eventu.security.UsuarioAutenticado;
+import com.eventu.services.UsuarioService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,11 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.eventu.dto.UsuarioResponseDTO;
-import com.eventu.security.UsuarioAutenticado;
-import com.eventu.services.UsuarioService;
+import java.util.List;
+import java.util.Map;
 
-/** Gestión del rol de organizador. Solo para administradores*/
+/** Gestión del rol de organizador (HU-03). Solo para administradores */
 @RestController
 @RequestMapping("/api/usuarios")
 @PreAuthorize("hasRole('ADMIN')")

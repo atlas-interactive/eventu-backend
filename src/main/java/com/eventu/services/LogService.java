@@ -1,5 +1,7 @@
 package com.eventu.services;
 
+import com.eventu.models.Log;
+import com.eventu.repositories.LogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -7,9 +9,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import com.eventu.models.Log;
-import com.eventu.repositories.LogRepository;
 
 /**
  * Registra en la tabla "logs" las operaciones críticas del sistema:
@@ -21,31 +20,29 @@ public class LogService {
     public static final String EXITO = "EXITO";
     public static final String FALLIDO = "FALLIDO";
 
-    public static final String ACCION_REGISTRO = "REGISTRO";
-    public static final String ACCION_LOGIN = "LOGIN";
-    public static final String ACCION_CREAR_EVENTO = "CREAR_EVENTO";
-    public static final String ACCION_EDITAR_EVENTO = "EDITAR_EVENTO";
-    public static final String ACCION_INSCRIBIR = "INSCRIBIR";
-    public static final String ACCION_CANCELAR_INSCRIPCION = "CANCELAR_INSCRIPCION";
-    public static final String ACCION_REGISTRAR_ASISTENCIA = "REGISTRAR_ASISTENCIA";
-
     public static final String ENTIDAD_USUARIO = "USUARIO";
     public static final String ENTIDAD_EVENTO = "EVENTO";
+    public static final String ENTIDAD_CATEGORIA = "CATEGORIA";
     public static final String ENTIDAD_INSCRIPCION = "INSCRIPCION";
     public static final String ENTIDAD_ASISTENCIA = "ASISTENCIA";
 
+    public static final String ACCION_REGISTRO = "REGISTRO";
+    public static final String ACCION_LOGIN = "LOGIN";
+    public static final String ACCION_REACTIVAR_CUENTA = "REACTIVAR_CUENTA";
+    public static final String ACCION_CREAR_EVENTO = "CREAR_EVENTO";
+    public static final String ACCION_EDITAR_EVENTO = "EDITAR_EVENTO";
     public static final String ACCION_CREAR_CATEGORIA = "CREAR_CATEGORIA";
     public static final String ACCION_EDITAR_CATEGORIA = "EDITAR_CATEGORIA";
     public static final String ACCION_ACTIVAR_CATEGORIA = "ACTIVAR_CATEGORIA";
     public static final String ACCION_DESACTIVAR_CATEGORIA = "DESACTIVAR_CATEGORIA";
-    public static final String ENTIDAD_CATEGORIA = "CATEGORIA";
-
     public static final String ACCION_ASIGNAR_ORGANIZADOR = "ASIGNAR_ORGANIZADOR";
     public static final String ACCION_REVOCAR_ORGANIZADOR = "REVOCAR_ORGANIZADOR";
 
+    public static final String ACCION_INSCRIBIR = "INSCRIBIR";
+    public static final String ACCION_CANCELAR_INSCRIPCION = "CANCELAR_INSCRIPCION";
+    public static final String ACCION_REGISTRAR_ASISTENCIA = "REGISTRAR_ASISTENCIA";
     public static final String ACCION_DESACTIVAR_CUENTA = "DESACTIVAR_CUENTA";
-    public static final String ACCION_REACTIVAR_CUENTA = "REACTIVAR_CUENTA";
-    
+
     private static final Logger LOG = LoggerFactory.getLogger(LogService.class);
 
     private final LogRepository logRepository;
@@ -58,7 +55,8 @@ public class LogService {
     }
 
     /**
-     * Registra una operación exitosa dentro de la misma transacción de la operación y el log solo queda guardado si la operación también se guarda
+     * Registra una operación exitosa dentro de la misma transacción de la operación:
+     * el log solo queda guardado si la operación también se guarda
      */
     @Transactional
     public void registrarExito(Long usuarioId, String accion, String entidad, Long entidadId) {
@@ -78,6 +76,7 @@ public class LogService {
         }
     }
 
+    /** Arma el registro de auditoría; la fecha la asigna la entidad al guardarse */
     private Log construir(Long usuarioId, String accion, String entidad, Long entidadId, String resultado, String motivo) {
         Log log = new Log();
         log.setUsuarioId(usuarioId);

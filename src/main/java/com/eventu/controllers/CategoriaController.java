@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** Gestión de categorías de eventos (HU-04) */
 @RestController
 @RequestMapping("/api/categorias")
 public class CategoriaController {
@@ -33,7 +34,7 @@ public class CategoriaController {
 
     /** Lista las categorías. Con {@code soloActivas=true} devuelve solo las que se pueden elegir al crear un evento */
     @GetMapping
-    public ResponseEntity<List<CategoriaResponseDTO>> obtenerCategorias(@RequestParam(defaultValue = "false") boolean soloActivas) {
+    public ResponseEntity<List<CategoriaResponseDTO>> listarCategorias(@RequestParam(defaultValue = "false") boolean soloActivas) {
         return ResponseEntity.ok(categoriaService.listarCategorias(soloActivas));
     }
 
@@ -54,7 +55,7 @@ public class CategoriaController {
     /** Desactiva una categoría (no la elimina). Solo necesita el id; no lleva cuerpo */
     @PatchMapping("/{id}/desactivar")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoriaResponseDTO> desactivarCategoria(@PathVariable Long id,  @AuthenticationPrincipal UsuarioAutenticado actual) {
+    public ResponseEntity<CategoriaResponseDTO> desactivarCategoria(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado actual) {
         return ResponseEntity.ok(categoriaService.desactivarCategoria(id, actual.id()));
     }
 

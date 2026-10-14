@@ -2,7 +2,7 @@ package com.eventu.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-/** Credenciales para iniciar sesión*/
+/** Credenciales para iniciar sesión */
 public class LoginRequestDTO {
 
     @NotBlank(message = "El correo es obligatorio.")

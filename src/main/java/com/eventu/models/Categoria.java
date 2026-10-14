@@ -1,8 +1,16 @@
 package com.eventu.models;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
 
+/** Categoría con la que se clasifican los eventos. Se desactiva, nunca se elimina */
 @Entity
 @Table(name = "categorias")
 public class Categoria {
@@ -20,6 +28,7 @@ public class Categoria {
     @Column(name = "creado_en", updatable = false)
     private LocalDateTime creadoEn;
 
+    /** Guarda la fecha de creación al insertar el registro por primera vez */
     @PrePersist
     protected void onCreate() {
         this.creadoEn = LocalDateTime.now();
