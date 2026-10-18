@@ -57,7 +57,7 @@ public class Evento {
     private LocalDateTime creadoEn;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "categoria_id")
+    @JoinColumn(name = "categoria_id", nullable = false)
     private Categoria categoria;
 
     /** Guarda la fecha de creación al insertar el registro por primera vez */
