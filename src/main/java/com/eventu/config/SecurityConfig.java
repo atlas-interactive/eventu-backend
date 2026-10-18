@@ -35,7 +35,7 @@ public class SecurityConfig {
 
     /**
      * @param origenesPermitidos orígenes del frontend permitidos por CORS, separados por coma
-     * (propiedad {@code eventu.cors.origenes}; en Render: EVENTU_CORS_ORIGENES)
+     * (propiedad {@code eventu.cors.origenes})
      */
     public SecurityConfig(JwtAuthFilter jwtAuthFilter, @Value("${eventu.cors.origenes:http://localhost:5173}") String[] origenesPermitidos) {
         this.jwtAuthFilter = jwtAuthFilter;
