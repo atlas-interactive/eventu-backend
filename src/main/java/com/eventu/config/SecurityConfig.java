@@ -1,10 +1,7 @@
 package com.eventu.config;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-
 import com.eventu.security.JwtAuthFilter;
+import com.eventu.util.Mensajes;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -23,6 +20,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+/** Seguridad HTTP: sesión sin estado con JWT, CORS para el frontend y rutas públicas de autenticación */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -33,14 +35,14 @@ public class SecurityConfig {
 
     /**
      * @param origenesPermitidos orígenes del frontend permitidos por CORS, separados por coma
-     * (propiedad {@code eventu.cors.origenes}; en Render: EVENTU_CORS_ORIGENES)
+     * (propiedad {@code eventu.cors.origenes})
      */
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter,
-                          @Value("${eventu.cors.origenes:http://localhost:5173}") String[] origenesPermitidos) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, @Value("${eventu.cors.origenes:http://localhost:5173}") String[] origenesPermitidos) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.origenesPermitidos = origenesPermitidos;
     }
 
+    /** Solo {@code /api/auth/**} es público; todo lo demás exige un token válido */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -55,16 +57,18 @@ public class SecurityConfig {
                 .authenticationEntryPoint((req, res, ex) ->
                     escribirError(res, HttpServletResponse.SC_UNAUTHORIZED, "Debe iniciar sesión."))
                 .accessDeniedHandler((req, res, ex) ->
-                    escribirError(res, HttpServletResponse.SC_FORBIDDEN, "No tiene permisos para esta acción.")))
+                    escribirError(res, HttpServletResponse.SC_FORBIDDEN, Mensajes.SIN_PERMISO_ACCION)))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
+    /** Cifrado de contraseñas con BCrypt */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(10); // factor de costo mínimo exigido por RNF05
     }
 
+    /** Permite las peticiones del frontend desde los orígenes configurados */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -76,6 +80,7 @@ public class SecurityConfig {
         return source;
     }
 
+    /** Escribe la respuesta de error con el mismo formato {@code {"error": "mensaje"}} del manejador de excepciones */
     private static void escribirError(HttpServletResponse res, int status, String mensaje) throws IOException {
         res.setStatus(status);
         res.setContentType("application/json;charset=UTF-8");

@@ -67,7 +67,7 @@ public class CategoriaService {
 
     /**
      * Cambia el nombre de una categoría. Solo un administrador puede hacerlo
-     * El estado (activa/inactiva) no se toca aquí: para eso están {@link #desactivarCategoria} y {@link #activarCategoria}
+     * El estado (activa/inactiva) no se toca aquí, les corresponde a {@link #desactivarCategoria} y {@link #activarCategoria}
      *
      * @throws AccesoDenegadoException si el usuario no es administrador
      * @throws RecursoNoEncontradoException si la categoría no existe
@@ -107,6 +107,7 @@ public class CategoriaService {
         return cambiarEstado(id, true, administradorId, LogService.ACCION_ACTIVAR_CATEGORIA);
     }
 
+    /** Activa o desactiva una categoría; si ya está en ese estado no cambia nada ni registra log */
     private CategoriaResponseDTO cambiarEstado(Long id, boolean activo, Long administradorId, String accion) {
         exigirAdministrador(administradorId, accion, id);
         Categoria categoria = buscarCategoria(id);
@@ -119,6 +120,7 @@ public class CategoriaService {
         return aDto(guardada);
     }
 
+    /** @throws RecursoNoEncontradoException si la categoría no existe */
     private Categoria buscarCategoria(Long id) {
         return categoriaRepository.findById(id).orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.CATEGORIA_NO_ENCONTRADA));
     }
@@ -133,6 +135,7 @@ public class CategoriaService {
         }
     }
 
+    /** Convierte la categoría a DTO, contando sus eventos publicados */
     private CategoriaResponseDTO aDto(Categoria categoria) {
         long eventosActivos = eventoRepository.countByCategoriaIdAndEstado(categoria.getId(), EstadoEvento.PUBLICADO);
         return CategoriaResponseDTO.desde(categoria, eventosActivos);

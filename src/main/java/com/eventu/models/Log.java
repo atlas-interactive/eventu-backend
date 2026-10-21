@@ -1,6 +1,13 @@
 package com.eventu.models;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
 
 /** Registro de auditoría de una operación crítica */
@@ -33,6 +40,7 @@ public class Log {
     @Column(columnDefinition = "TEXT")
     private String motivo;
 
+    /** Guarda la fecha de creación al insertar el registro por primera vez */
     @PrePersist
     protected void onCreate() {
         this.fecha = LocalDateTime.now();

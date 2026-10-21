@@ -5,11 +5,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Datos para registrar una cuenta nueva*/
+/** Datos para registrar una cuenta nueva */
 public class RegistroRequestDTO {
 
     /** Solo correos del dominio institucional, sin distinguir mayúsculas */
-    public static final String REGEX_CORREO_INSTITUCIONAL = "(?i)^[a-z0-9._%+-]+@unillanos\\.edu\\.co$";
+    private static final String REGEX_CORREO_INSTITUCIONAL = "(?i)^[a-z0-9._%+-]+@unillanos\\.edu\\.co$";
 
     @NotBlank(message = "El nombre es obligatorio.")
     @Size(max = 100, message = "El nombre no puede superar los 100 caracteres.")

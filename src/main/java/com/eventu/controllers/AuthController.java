@@ -15,14 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/** Registro e inicio de sesión (HU-01 y HU-02). */
+/** Registro e inicio de sesión (HU-01 y HU-02) */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
     private final JwtService jwtService;
-    
 
     public AuthController(AuthService authService, JwtService jwtService) {
         this.authService = authService;
