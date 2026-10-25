@@ -15,6 +15,9 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> 
 
     List<Inscripcion> findByUsuarioId(Long usuarioId);
 
+    /** Inscripciones de un evento en un estado dado (por ejemplo, las activas al cancelarlo) */
+    List<Inscripcion> findByEventoIdAndEstado(Long eventoId, EstadoInscripcion estado);
+
     Optional<Inscripcion> findByCodigoQr(String codigoQr);
 
     Optional<Inscripcion> findByUsuarioIdAndEventoIdAndEstado(Long usuarioId, Long eventoId, EstadoInscripcion estado);

@@ -31,6 +31,7 @@ public class LogService {
     public static final String ACCION_REACTIVAR_CUENTA = "REACTIVAR_CUENTA";
     public static final String ACCION_CREAR_EVENTO = "CREAR_EVENTO";
     public static final String ACCION_EDITAR_EVENTO = "EDITAR_EVENTO";
+    public static final String ACCION_CANCELAR_EVENTO = "CANCELAR_EVENTO";
     public static final String ACCION_CREAR_CATEGORIA = "CREAR_CATEGORIA";
     public static final String ACCION_EDITAR_CATEGORIA = "EDITAR_CATEGORIA";
     public static final String ACCION_ACTIVAR_CATEGORIA = "ACTIVAR_CATEGORIA";

@@ -13,4 +13,8 @@ spring.jpa.show-sql=true
 eventu.cors.origenes=http://localhost:5173
 
 eventu.jwt.secret=${JWT_SECRET}
+
+# Correo (SendGrid por API HTTP). Si la clave está vacía, los correos no se envían y solo se deja un aviso en el log
+eventu.correo.sendgrid-api-key=${SENDGRID_API_KEY:}
+eventu.correo.remitente=admineventu@gmail.com
 eventu.jwt.expiracion-ms=86400000
