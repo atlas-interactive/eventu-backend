@@ -80,9 +80,10 @@ class AuthServiceTest {
         when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.of(desactivado));
         when(passwordEncoder.matches(PASSWORD, HASH)).thenReturn(true);
 
-        Usuario resultado = servicio.autenticar(CORREO, PASSWORD);
+        AuthService.ResultadoAutenticacion resultado = servicio.autenticar(CORREO, PASSWORD);
 
-        assertTrue(resultado.getActivo());
+        assertTrue(resultado.usuario().getActivo());
+        assertTrue(resultado.cuentaReactivada());
         verify(usuarioRepository).save(desactivado);
         verify(logService).registrarExito(USUARIO_ID, LogService.ACCION_REACTIVAR_CUENTA, LogService.ENTIDAD_USUARIO, USUARIO_ID);
         verify(logService).registrarExito(USUARIO_ID, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, USUARIO_ID);
@@ -109,8 +110,9 @@ class AuthServiceTest {
         when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.of(activo));
         when(passwordEncoder.matches(PASSWORD, HASH)).thenReturn(true);
 
-        servicio.autenticar(CORREO, PASSWORD);
+        AuthService.ResultadoAutenticacion resultado = servicio.autenticar(CORREO, PASSWORD);
 
+        assertFalse(resultado.cuentaReactivada());
         verify(usuarioRepository, never()).save(any());
         verify(logService, never()).registrarExito(any(), eq(LogService.ACCION_REACTIVAR_CUENTA), anyString(), any());
         verify(logService).registrarExito(USUARIO_ID, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, USUARIO_ID);

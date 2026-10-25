@@ -55,10 +55,11 @@ public class AuthService {
     /**
      * Valida las credenciales de un usuario. Si la cuenta estaba desactivada y las credenciales son correctas, la reactiva
      *
+     * @return el usuario autenticado y si su cuenta estaba desactivada y fue reactivada en este inicio de sesión
      * @throws CredencialesInvalidasException si el correo o la contraseña no coinciden
      */
     @Transactional
-    public Usuario autenticar(String correo, String password) {
+    public ResultadoAutenticacion autenticar(String correo, String password) {
         Usuario usuario = usuarioRepository.findByCorreoIgnoreCase(normalizarCorreo(correo)).orElse(null);
         Long usuarioId = usuario == null ? null : usuario.getId();
 
@@ -69,17 +70,27 @@ public class AuthService {
         }
 
         // Solo llega aquí quien demostró ser el dueño de la cuenta (contraseña correcta)
-        if (Boolean.FALSE.equals(usuario.getActivo())) {
+        boolean cuentaReactivada = Boolean.FALSE.equals(usuario.getActivo());
+        if (cuentaReactivada) {
             usuario.setActivo(true);
             usuarioRepository.save(usuario);
             logService.registrarExito(usuarioId, LogService.ACCION_REACTIVAR_CUENTA, LogService.ENTIDAD_USUARIO, usuarioId);
         }
 
         logService.registrarExito(usuarioId, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, usuarioId);
-        return usuario;
+        return new ResultadoAutenticacion(usuario, cuentaReactivada);
     }
 
     /** Los correos se guardan y se comparan en minúsculas y sin espacios en los extremos */
+    /**
+     * Resultado de iniciar sesión. La bandera existe porque, una vez reactivada, la cuenta ya figura como activa
+     * y quien responde la petición no podría saber que estaba desactivada
+     *
+     * @param usuario usuario autenticado
+     * @param cuentaReactivada true si la cuenta estaba desactivada y se reactivó con este inicio de sesión
+     */
+    public record ResultadoAutenticacion(Usuario usuario, boolean cuentaReactivada) { }
+
     private String normalizarCorreo(String correo) {
         return correo.trim().toLowerCase();
     }

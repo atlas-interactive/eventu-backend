@@ -5,6 +5,7 @@ import com.eventu.dto.RegistroRequestDTO;
 import com.eventu.models.Usuario;
 import com.eventu.security.JwtService;
 import com.eventu.services.AuthService;
+import com.eventu.services.AuthService.ResultadoAutenticacion;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,12 +43,14 @@ public class AuthController {
     /** Valida las credenciales y devuelve los datos de la sesión */
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequestDTO request) {
-        Usuario usuario = authService.autenticar(request.getCorreo(), request.getPassword());
+        ResultadoAutenticacion resultado = authService.autenticar(request.getCorreo(), request.getPassword());
+        Usuario usuario = resultado.usuario();
         return ResponseEntity.ok(Map.<String, Object>of(
                 "token", jwtService.generarToken(usuario.getId(), usuario.getRol()),
                 "usuarioId", usuario.getId(),
                 "nombre", usuario.getNombre(),
                 "correo", usuario.getCorreo(),
-                "rol", usuario.getRol().name()));
+                "rol", usuario.getRol().name(),
+                "cuentaReactivada", resultado.cuentaReactivada()));
     }
 }
