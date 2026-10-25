@@ -9,11 +9,16 @@ import com.eventu.exceptions.RecursoNoEncontradoException;
 import com.eventu.exceptions.SolicitudInvalidaException;
 import com.eventu.models.Categoria;
 import com.eventu.models.EstadoEvento;
+import com.eventu.models.EstadoInscripcion;
 import com.eventu.models.Evento;
+import com.eventu.models.Inscripcion;
 import com.eventu.models.Usuario;
+import com.eventu.notificaciones.CancelacionEventoNotificada;
 import com.eventu.repositories.CategoriaRepository;
 import com.eventu.repositories.EventoRepository;
+import com.eventu.repositories.InscripcionRepository;
 import com.eventu.util.Mensajes;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,14 +30,20 @@ public class EventoService {
 
     private final EventoRepository eventoRepository;
     private final CategoriaRepository categoriaRepository;
+    private final InscripcionRepository inscripcionRepository;
     private final AutorizacionService autorizacionService;
     private final LogService logService;
+    private final ApplicationEventPublisher publicador;
 
-    public EventoService(EventoRepository eventoRepository, CategoriaRepository categoriaRepository, AutorizacionService autorizacionService, LogService logService) {
+    public EventoService(EventoRepository eventoRepository, CategoriaRepository categoriaRepository,
+                         InscripcionRepository inscripcionRepository, AutorizacionService autorizacionService,
+                         LogService logService, ApplicationEventPublisher publicador) {
         this.eventoRepository = eventoRepository;
         this.categoriaRepository = categoriaRepository;
+        this.inscripcionRepository = inscripcionRepository;
         this.autorizacionService = autorizacionService;
         this.logService = logService;
+        this.publicador = publicador;
     }
 
     /**
@@ -101,6 +112,57 @@ public class EventoService {
         Evento guardado = eventoRepository.save(evento);
         logService.registrarExito(organizadorId, LogService.ACCION_EDITAR_EVENTO, LogService.ENTIDAD_EVENTO, eventoId);
         return guardado;
+    }
+
+    /**
+     * Cancela un evento: pasa sus inscripciones activas a CANCELADA (se conservan, no se borran)
+     * y avisa por correo a esos usuarios cuando la transacción se confirma
+     *
+     * @throws AccesoDenegadoException si el usuario no es el dueño del evento ni administrador
+     * @throws ConflictoException si el evento ya estaba cancelado
+     */
+    @Transactional
+    public Evento cancelarEvento(Long eventoId, Long usuarioId) {
+        Evento evento = obtenerEventoGestionable(eventoId, usuarioId, LogService.ACCION_CANCELAR_EVENTO);
+        if (evento.getEstado() == EstadoEvento.CANCELADO) {
+            logService.registrarFallo(usuarioId, LogService.ACCION_CANCELAR_EVENTO, LogService.ENTIDAD_EVENTO,
+                    eventoId, "Evento ya cancelado");
+            throw new ConflictoException("El evento ya está cancelado.");
+        }
+
+        List<Inscripcion> activas = inscripcionRepository.findByEventoIdAndEstado(eventoId, EstadoInscripcion.ACTIVA);
+        List<String> correos = activas.stream().map(i -> i.getUsuario().getCorreo()).toList();
+        activas.forEach(i -> i.setEstado(EstadoInscripcion.CANCELADA));
+        inscripcionRepository.saveAll(activas);
+
+        evento.setEstado(EstadoEvento.CANCELADO);
+        Evento guardado = eventoRepository.save(evento);
+        logService.registrarExito(usuarioId, LogService.ACCION_CANCELAR_EVENTO, LogService.ENTIDAD_EVENTO, eventoId);
+
+        if (!correos.isEmpty()) {
+            publicador.publishEvent(new CancelacionEventoNotificada(
+                    eventoId, evento.getTitulo(), evento.getFechaInicio(), evento.getUbicacion(), correos));
+        }
+        return guardado;
+    }
+
+    /**
+     * Busca el evento con su fila bloqueada y verifica que el usuario pueda gestionarlo
+     * (organizador dueño o administrador)
+     *
+     * @param accion acción que se registra en el log si el acceso se deniega
+     * @throws RecursoNoEncontradoException si el evento no existe
+     * @throws AccesoDenegadoException si el usuario no puede gestionar eventos o el evento es de otro organizador
+     */
+    private Evento obtenerEventoGestionable(Long eventoId, Long usuarioId, String accion) {
+        Usuario gestor = autorizacionService.obtenerGestorDeEventos(usuarioId);
+        Evento evento = eventoRepository.buscarPorIdConBloqueo(eventoId)
+                .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));
+        if (!autorizacionService.puedeModificarEvento(gestor, evento)) {
+            logService.registrarFallo(usuarioId, accion, LogService.ENTIDAD_EVENTO, eventoId, "Evento de otro organizador");
+            throw new AccesoDenegadoException(Mensajes.EVENTO_AJENO);
+        }
+        return evento;
     }
 
     /**

@@ -13,13 +13,16 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.eventu.dto.EventoActualizacionRequestDTO;
 import com.eventu.dto.EventoRequestDTO;
@@ -29,13 +32,17 @@ import com.eventu.exceptions.RecursoNoEncontradoException;
 import com.eventu.exceptions.SolicitudInvalidaException;
 import com.eventu.models.Categoria;
 import com.eventu.models.EstadoEvento;
+import com.eventu.models.EstadoInscripcion;
 import com.eventu.models.Evento;
+import com.eventu.models.Inscripcion;
 import com.eventu.models.Rol;
 import com.eventu.models.Usuario;
+import com.eventu.notificaciones.CancelacionEventoNotificada;
 import com.eventu.repositories.CategoriaRepository;
 import com.eventu.repositories.EventoRepository;
+import com.eventu.repositories.InscripcionRepository;
 
-/** Pruebas de HU-05 (crear evento) y HU-06 (editar evento). Cada prueba indica el escenario que cubre */
+/** Pruebas de HU-05 (crear evento), HU-06 (editar evento) y HU-07 (cancelar evento). Cada prueba indica el escenario que cubre */
 @ExtendWith(MockitoExtension.class)
 class EventoServiceTest {
 
@@ -47,14 +54,17 @@ class EventoServiceTest {
 
     @Mock private EventoRepository eventoRepository;
     @Mock private CategoriaRepository categoriaRepository;
+    @Mock private InscripcionRepository inscripcionRepository;
     @Mock private AutorizacionService autorizacionService;
     @Mock private LogService logService;
+    @Mock private ApplicationEventPublisher publicador;
 
     private EventoService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new EventoService(eventoRepository, categoriaRepository, autorizacionService, logService);
+        servicio = new EventoService(eventoRepository, categoriaRepository, inscripcionRepository,
+                autorizacionService, logService, publicador);
     }
 
     // HU-05 escenario 1.0: crear con datos válidos
@@ -184,7 +194,124 @@ class EventoServiceTest {
         verify(eventoRepository, never()).save(any());
     }
 
+    // HU-07 escenario 1.0: cancelación por el organizador dueño
+
+    @Test
+    void cancelar_porElOrganizadorDueno_cancelaElEventoYSusInscripcionesActivasSinBorrarlas() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 8);
+        prepararEdicion(dueno, evento, true);
+        Inscripcion primera = inscripcionActiva(evento, "ana@unillanos.edu.co");
+        Inscripcion segunda = inscripcionActiva(evento, "luis@unillanos.edu.co");
+        when(inscripcionRepository.findByEventoIdAndEstado(EVENTO_ID, EstadoInscripcion.ACTIVA))
+                .thenReturn(List.of(primera, segunda));
+        when(eventoRepository.save(evento)).thenReturn(evento);
+
+        Evento cancelado = servicio.cancelarEvento(EVENTO_ID, ORGANIZADOR_ID);
+
+        assertEquals(EstadoEvento.CANCELADO, cancelado.getEstado());
+        assertEquals(EstadoInscripcion.CANCELADA, primera.getEstado());
+        assertEquals(EstadoInscripcion.CANCELADA, segunda.getEstado());
+        verify(inscripcionRepository).saveAll(List.of(primera, segunda));
+        verify(inscripcionRepository, never()).delete(any());
+        verify(inscripcionRepository, never()).deleteAll(any());
+        verify(logService).registrarExito(ORGANIZADOR_ID, LogService.ACCION_CANCELAR_EVENTO, LogService.ENTIDAD_EVENTO, EVENTO_ID);
+    }
+
+    // HU-07 escenario 4.0: correo a los usuarios con inscripción activa
+
+    @Test
+    void cancelar_conUsuariosInscritos_publicaElAvisoConElCorreoDeCadaUno() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 8);
+        prepararEdicion(dueno, evento, true);
+        when(inscripcionRepository.findByEventoIdAndEstado(EVENTO_ID, EstadoInscripcion.ACTIVA)).thenReturn(List.of(
+                inscripcionActiva(evento, "ana@unillanos.edu.co"), inscripcionActiva(evento, "luis@unillanos.edu.co")));
+        when(eventoRepository.save(evento)).thenReturn(evento);
+
+        servicio.cancelarEvento(EVENTO_ID, ORGANIZADOR_ID);
+
+        ArgumentCaptor<CancelacionEventoNotificada> aviso = ArgumentCaptor.forClass(CancelacionEventoNotificada.class);
+        verify(publicador).publishEvent(aviso.capture());
+        assertEquals(List.of("ana@unillanos.edu.co", "luis@unillanos.edu.co"), aviso.getValue().correos());
+        assertEquals("Evento", aviso.getValue().titulo());
+    }
+
+    @Test
+    void cancelar_sinInscritos_cancelaPeroNoPublicaAvisoDeCorreo() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 10);
+        prepararEdicion(dueno, evento, true);
+        when(inscripcionRepository.findByEventoIdAndEstado(EVENTO_ID, EstadoInscripcion.ACTIVA)).thenReturn(List.of());
+        when(eventoRepository.save(evento)).thenReturn(evento);
+
+        servicio.cancelarEvento(EVENTO_ID, ORGANIZADOR_ID);
+
+        assertEquals(EstadoEvento.CANCELADO, evento.getEstado());
+        verify(publicador, never()).publishEvent(any(Object.class));
+    }
+
+    // HU-07 escenario 1.0: cancelación por un organizador distinto
+
+    @Test
+    void cancelar_porOtroOrganizador_lanzaAccesoDenegadoYNoCambiaNada() {
+        Evento evento = evento(usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR), EstadoEvento.PUBLICADO, 10, 10);
+        prepararEdicion(usuario(OTRO_ID, Rol.ORGANIZADOR), evento, false);
+
+        assertThrows(AccesoDenegadoException.class, () -> servicio.cancelarEvento(EVENTO_ID, OTRO_ID));
+
+        assertEquals(EstadoEvento.PUBLICADO, evento.getEstado());
+        verify(eventoRepository, never()).save(any());
+        verifyNoInteractions(inscripcionRepository, publicador);
+        verify(logService).registrarFallo(eq(OTRO_ID), eq(LogService.ACCION_CANCELAR_EVENTO),
+                eq(LogService.ENTIDAD_EVENTO), eq(EVENTO_ID), anyString());
+    }
+
+    // HU-07 escenario 1.0: evento ya cancelado
+
+    @Test
+    void cancelar_unEventoYaCancelado_lanzaConflictoYNoVuelveAAvisar() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        prepararEdicion(dueno, evento(dueno, EstadoEvento.CANCELADO, 10, 10), true);
+
+        assertThrows(ConflictoException.class, () -> servicio.cancelarEvento(EVENTO_ID, ORGANIZADOR_ID));
+
+        verify(eventoRepository, never()).save(any());
+        verifyNoInteractions(inscripcionRepository, publicador);
+        verify(logService).registrarFallo(eq(ORGANIZADOR_ID), eq(LogService.ACCION_CANCELAR_EVENTO),
+                eq(LogService.ENTIDAD_EVENTO), eq(EVENTO_ID), anyString());
+    }
+
+    @Test
+    void cancelar_unEventoInexistente_lanzaNoEncontrado() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        when(autorizacionService.obtenerGestorDeEventos(ORGANIZADOR_ID)).thenReturn(dueno);
+        when(eventoRepository.buscarPorIdConBloqueo(EVENTO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNoEncontradoException.class, () -> servicio.cancelarEvento(EVENTO_ID, ORGANIZADOR_ID));
+    }
+
+    @Test
+    void cancelar_siElUsuarioNoPuedeGestionarEventos_lanzaAccesoDenegado() {
+        doThrow(new AccesoDenegadoException("Sin permiso"))
+                .when(autorizacionService).obtenerGestorDeEventos(USUARIO_ID);
+
+        assertThrows(AccesoDenegadoException.class, () -> servicio.cancelarEvento(EVENTO_ID, USUARIO_ID));
+
+        verifyNoInteractions(eventoRepository, inscripcionRepository, publicador);
+    }
+
     // Utilidades
+
+    private static Inscripcion inscripcionActiva(Evento evento, String correo) {
+        Usuario inscrito = new Usuario();
+        inscrito.setCorreo(correo);
+        Inscripcion inscripcion = new Inscripcion();
+        inscripcion.setUsuario(inscrito);
+        inscripcion.setEvento(evento);
+        inscripcion.setEstado(EstadoInscripcion.ACTIVA);
+        return inscripcion;
+    }
 
     private void prepararEdicion(Usuario gestor, Evento evento, boolean puedeModificar) {
         when(autorizacionService.obtenerGestorDeEventos(gestor.getId())).thenReturn(gestor);
