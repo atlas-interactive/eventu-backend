@@ -17,6 +17,7 @@ import com.eventu.util.Mensajes;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -48,7 +49,7 @@ public class InscripcionService {
      * Pueden inscribirse los usuarios con rol USUARIO u ORGANIZADOR; el administrador no
      *
      * @throws AccesoDenegadoException si el usuario es administrador
-     * @throws ConflictoException si el evento no está publicado, el usuario ya tiene una inscripción activa o no quedan cupos
+     * @throws ConflictoException si el evento está cancelado o ya inició, si el usuario ya tiene una inscripción activa o si no quedan cupos
      */
     @Transactional
     public Inscripcion inscribirUsuario(Long usuarioId, Long eventoId) {
@@ -64,6 +65,9 @@ public class InscripcionService {
 
         if (evento.getEstado() != EstadoEvento.PUBLICADO) {
             throw rechazarInscripcion(usuarioId, eventoId, "No se permiten inscripciones en eventos que no estén publicados.");
+        }
+        if (evento.getFechaInicio().isBefore(LocalDateTime.now())) {
+            throw rechazarInscripcion(usuarioId, eventoId, "El evento ya inició; no es posible inscribirse.");
         }
         if (inscripcionRepository.existsByUsuarioIdAndEventoIdAndEstado(usuarioId, eventoId, EstadoInscripcion.ACTIVA)) {
             throw rechazarInscripcion(usuarioId, eventoId, "Ya tienes una inscripción activa para este evento.");
