@@ -48,7 +48,7 @@ public class InscripcionService {
      * Inscribe a un usuario en un evento y genera su código QR único
      * Pueden inscribirse los usuarios con rol USUARIO u ORGANIZADOR; el administrador no
      *
-     * @throws AccesoDenegadoException si el usuario es administrador
+     * @throws AccesoDenegadoException si el usuario es administrador o es el organizador del evento
      * @throws ConflictoException si el evento está cancelado o ya inició, si el usuario ya tiene una inscripción activa o si no quedan cupos
      */
     @Transactional
@@ -63,6 +63,11 @@ public class InscripcionService {
         Evento evento = eventoRepository.buscarPorIdConBloqueo(eventoId)
                 .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));
 
+        if (evento.getOrganizador().getId().equals(usuarioId)) {
+            logService.registrarFallo(usuarioId, LogService.ACCION_INSCRIBIR, LogService.ENTIDAD_EVENTO, eventoId,
+                    "El organizador no puede inscribirse en su propio evento");
+            throw new AccesoDenegadoException("No puedes inscribirte en un evento que tú organizas.");
+        }
         if (evento.getEstado() != EstadoEvento.PUBLICADO) {
             throw rechazarInscripcion(usuarioId, eventoId, "No se permiten inscripciones en eventos que no estén publicados.");
         }
