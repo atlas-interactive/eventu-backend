@@ -1,6 +1,7 @@
 package com.eventu.services;
 
 import com.eventu.dto.InscripcionResponseDTO;
+import com.eventu.dto.InscritoResponseDTO;
 import com.eventu.exceptions.AccesoDenegadoException;
 import com.eventu.exceptions.ConflictoException;
 import com.eventu.exceptions.RecursoNoEncontradoException;
@@ -18,8 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** Inscripción, cancelación y consulta de inscripciones de un usuario*/
@@ -125,6 +128,31 @@ public class InscripcionService {
 
         logService.registrarExito(usuarioId, LogService.ACCION_CANCELAR_INSCRIPCION, LogService.ENTIDAD_INSCRIPCION, inscripcionId);
         return guardada;
+    }
+
+    /**
+     * Lista los participantes con inscripción activa en un evento, con su estado de asistencia.
+     * Lo consultan el organizador dueño del evento o un administrador
+     *
+     * @throws AccesoDenegadoException si el usuario no puede gestionar eventos o el evento es de otro organizador
+     * @throws RecursoNoEncontradoException si el evento no existe
+     */
+    @Transactional(readOnly = true)
+    public List<InscritoResponseDTO> listarInscritosDeEvento(Long eventoId, Long usuarioId) {
+        Usuario gestor = autorizacionService.obtenerGestorDeEventos(usuarioId);
+        Evento evento = eventoRepository.findById(eventoId)
+                .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));
+        if (!autorizacionService.puedeModificarEvento(gestor, evento)) {
+            logService.registrarFallo(usuarioId, LogService.ACCION_CONSULTAR_INSCRITOS, LogService.ENTIDAD_EVENTO,
+                    eventoId, "Intento de consultar los inscritos de un evento ajeno");
+            throw new AccesoDenegadoException(Mensajes.EVENTO_AJENO);
+        }
+
+        // Una sola consulta con las asistencias del evento, en lugar de una por cada inscrito
+        Set<Long> conAsistencia = new HashSet<>(asistenciaRepository.findInscripcionIdsConAsistenciaPorEvento(eventoId));
+        return inscripcionRepository.findByEventoIdAndEstado(eventoId, EstadoInscripcion.ACTIVA).stream()
+                .map(i -> InscritoResponseDTO.desde(i, conAsistencia.contains(i.getId())))
+                .toList();
     }
 
     /** Lista todas las inscripciones de un usuario, activas e históricas*/

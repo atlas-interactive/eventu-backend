@@ -3,9 +3,11 @@ package com.eventu.controllers;
 import com.eventu.dto.EventoActualizacionRequestDTO;
 import com.eventu.dto.EventoRequestDTO;
 import com.eventu.dto.EventoResponseDTO;
+import com.eventu.dto.InscritoResponseDTO;
 import com.eventu.models.Evento;
 import com.eventu.security.UsuarioAutenticado;
 import com.eventu.services.EventoService;
+import com.eventu.services.InscripcionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,9 +31,11 @@ import java.util.Map;
 public class EventoController {
 
     private final EventoService eventoService;
+    private final InscripcionService inscripcionService;
 
-    public EventoController(EventoService eventoService) {
+    public EventoController(EventoService eventoService, InscripcionService inscripcionService) {
         this.eventoService = eventoService;
+        this.inscripcionService = inscripcionService;
     }
 
     /** Lista los eventos publicados */
@@ -65,5 +69,12 @@ public class EventoController {
         Evento evento = eventoService.cancelarEvento(id, actual.id());
         return ResponseEntity.ok(Map.<String, Object>of(
                 "mensaje", "Evento cancelado exitosamente.", "eventoId", evento.getId()));
+    }
+
+    /** Lista los participantes inscritos en un evento y si ya asistieron. Solo su organizador o un administrador */
+    @GetMapping("/{id}/inscritos")
+    @PreAuthorize("hasAnyRole('ORGANIZADOR','ADMIN')")
+    public ResponseEntity<List<InscritoResponseDTO>> listarInscritos(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado actual) {
+        return ResponseEntity.ok(inscripcionService.listarInscritosDeEvento(id, actual.id()));
     }
 }
