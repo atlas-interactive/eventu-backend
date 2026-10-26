@@ -49,6 +49,7 @@ class EventoServiceTest {
     private static final Long ORGANIZADOR_ID = 10L;
     private static final Long OTRO_ID = 11L;
     private static final Long USUARIO_ID = 20L;
+    private static final Long ADMIN_ID = 1L;
     private static final Long EVENTO_ID = 100L;
     private static final Long CATEGORIA_ID = 5L;
 
@@ -317,6 +318,70 @@ class EventoServiceTest {
         when(autorizacionService.obtenerGestorDeEventos(gestor.getId())).thenReturn(gestor);
         when(eventoRepository.buscarPorIdConBloqueo(EVENTO_ID)).thenReturn(Optional.of(evento));
         when(autorizacionService.puedeModificarEvento(gestor, evento)).thenReturn(puedeModificar);
+    }
+
+    // Visibilidad de eventos cancelados: solo su organizador (en "mis eventos") y el administrador
+
+    @Test
+    void listarEventos_comoUsuario_consultaSoloLosPublicados() {
+        when(autorizacionService.obtenerUsuario(USUARIO_ID)).thenReturn(usuario(USUARIO_ID, Rol.USUARIO));
+        when(eventoRepository.findByEstado(EstadoEvento.PUBLICADO))
+                .thenReturn(List.of(evento(usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR), EstadoEvento.PUBLICADO, 10, 10)));
+
+        var eventos = servicio.listarEventos(USUARIO_ID);
+
+        assertEquals(1, eventos.size());
+        assertEquals("PUBLICADO", eventos.get(0).estado());
+        verify(eventoRepository, never()).findAll();
+    }
+
+    @Test
+    void listarEventos_comoOrganizador_noIncluyeLosCanceladosEnElListadoGeneral() {
+        when(autorizacionService.obtenerUsuario(ORGANIZADOR_ID)).thenReturn(usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR));
+        when(eventoRepository.findByEstado(EstadoEvento.PUBLICADO)).thenReturn(List.of());
+
+        servicio.listarEventos(ORGANIZADOR_ID);
+
+        verify(eventoRepository).findByEstado(EstadoEvento.PUBLICADO);
+        verify(eventoRepository, never()).findAll();
+    }
+
+    @Test
+    void listarEventos_comoAdministrador_devuelveTodosIncluidosLosCancelados() {
+        Usuario organizador = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        when(autorizacionService.obtenerUsuario(ADMIN_ID)).thenReturn(usuario(ADMIN_ID, Rol.ADMIN));
+        when(eventoRepository.findAll()).thenReturn(List.of(
+                evento(organizador, EstadoEvento.PUBLICADO, 10, 10),
+                evento(organizador, EstadoEvento.CANCELADO, 10, 10)));
+
+        var eventos = servicio.listarEventos(ADMIN_ID);
+
+        assertEquals(2, eventos.size());
+        assertTrue(eventos.stream().anyMatch(e -> e.estado().equals("CANCELADO")));
+        verify(eventoRepository, never()).findByEstado(any(EstadoEvento.class));
+    }
+
+    @Test
+    void listarEventosDeOrganizador_devuelveSusEventosIncluidosLosCancelados() {
+        Usuario organizador = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        when(autorizacionService.obtenerGestorDeEventos(ORGANIZADOR_ID)).thenReturn(organizador);
+        when(eventoRepository.findByOrganizadorId(ORGANIZADOR_ID)).thenReturn(List.of(
+                evento(organizador, EstadoEvento.PUBLICADO, 10, 10),
+                evento(organizador, EstadoEvento.CANCELADO, 10, 10)));
+
+        var eventos = servicio.listarEventosDeOrganizador(ORGANIZADOR_ID);
+
+        assertEquals(2, eventos.size());
+        assertTrue(eventos.stream().anyMatch(e -> e.estado().equals("CANCELADO")));
+    }
+
+    @Test
+    void listarEventosDeOrganizador_siNoPuedeGestionarEventos_lanzaAccesoDenegadoSinConsultarEventos() {
+        doThrow(new AccesoDenegadoException("sin permiso")).when(autorizacionService).obtenerGestorDeEventos(USUARIO_ID);
+
+        assertThrows(AccesoDenegadoException.class, () -> servicio.listarEventosDeOrganizador(USUARIO_ID));
+
+        verifyNoInteractions(eventoRepository);
     }
 
     private static Usuario usuario(Long id, Rol rol) {
