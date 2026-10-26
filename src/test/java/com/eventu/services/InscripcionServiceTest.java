@@ -39,6 +39,7 @@ class InscripcionServiceTest {
 
     private static final Long USUARIO_ID = 20L;
     private static final Long ADMIN_ID = 1L;
+    private static final Long ORGANIZADOR_ID = 10L;
     private static final Long EVENTO_ID = 100L;
 
     @Mock private InscripcionRepository inscripcionRepository;
@@ -90,6 +91,23 @@ class InscripcionServiceTest {
         Inscripcion creada = servicio.inscribirUsuario(USUARIO_ID, EVENTO_ID);
 
         assertEquals(organizador, creada.getUsuario());
+    }
+
+    // Regla: el organizador no puede inscribirse en su propio evento
+
+    @Test
+    void inscribir_elOrganizadorEnSuPropioEvento_lanzaAccesoDenegadoSinTocarCupos() {
+        Usuario organizador = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(10, 3);
+        prepararInscripcion(organizador, evento);
+
+        assertThrows(AccesoDenegadoException.class, () -> servicio.inscribirUsuario(ORGANIZADOR_ID, EVENTO_ID));
+
+        assertEquals(3, evento.getCuposDisponibles());
+        verify(eventoRepository, never()).save(any(Evento.class));
+        verify(inscripcionRepository, never()).save(any(Inscripcion.class));
+        verify(logService).registrarFallo(ORGANIZADOR_ID, LogService.ACCION_INSCRIBIR, LogService.ENTIDAD_EVENTO,
+                EVENTO_ID, "El organizador no puede inscribirse en su propio evento");
     }
 
     // HU-10 escenario 1.0: último cupo (control transaccional)
@@ -228,6 +246,7 @@ class InscripcionServiceTest {
         Evento evento = new Evento();
         evento.setId(EVENTO_ID);
         evento.setTitulo("Evento");
+        evento.setOrganizador(usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR));
         evento.setEstado(EstadoEvento.PUBLICADO);
         evento.setFechaInicio(LocalDateTime.now().plusDays(10));
         evento.setCuposMaximos(maximos);

@@ -34,10 +34,17 @@ public class EventoController {
         this.eventoService = eventoService;
     }
 
-    /** Lista los eventos publicados */
+    /** Lista los eventos publicados; un administrador ve todos, incluidos los cancelados */
     @GetMapping
-    public ResponseEntity<List<EventoResponseDTO>> listarEventos() {
-        return ResponseEntity.ok(eventoService.listarEventosActivos());
+    public ResponseEntity<List<EventoResponseDTO>> listarEventos(@AuthenticationPrincipal UsuarioAutenticado actual) {
+        return ResponseEntity.ok(eventoService.listarEventos(actual.id()));
+    }
+
+    /** Lista los eventos del organizador que consulta, en cualquier estado (incluidos los cancelados) */
+    @GetMapping("/mios")
+    @PreAuthorize("hasAnyRole('ORGANIZADOR','ADMIN')")
+    public ResponseEntity<List<EventoResponseDTO>> listarMisEventos(@AuthenticationPrincipal UsuarioAutenticado actual) {
+        return ResponseEntity.ok(eventoService.listarEventosDeOrganizador(actual.id()));
     }
 
     /** Crea un evento publicado. Solo organizadores y administradores (se identifican con el token) */

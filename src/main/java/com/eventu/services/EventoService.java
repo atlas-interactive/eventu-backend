@@ -12,6 +12,7 @@ import com.eventu.models.EstadoEvento;
 import com.eventu.models.EstadoInscripcion;
 import com.eventu.models.Evento;
 import com.eventu.models.Inscripcion;
+import com.eventu.models.Rol;
 import com.eventu.models.Usuario;
 import com.eventu.notificaciones.CancelacionEventoNotificada;
 import com.eventu.repositories.CategoriaRepository;
@@ -76,10 +77,28 @@ public class EventoService {
         return guardado;
     }
 
-    /** Lista los eventos publicados. Los cancelados no aparecen en la consulta */
+    /**
+     * Lista los eventos que el usuario puede ver: los publicados, y para un administrador también los cancelados.
+     * Un organizador ve sus propios eventos cancelados en {@link #listarEventosDeOrganizador(Long)}
+     */
     @Transactional(readOnly = true)
-    public List<EventoResponseDTO> listarEventosActivos() {
-        return eventoRepository.findByEstado(EstadoEvento.PUBLICADO).stream()
+    public List<EventoResponseDTO> listarEventos(Long usuarioId) {
+        Usuario usuario = autorizacionService.obtenerUsuario(usuarioId);
+        List<Evento> eventos = usuario.getRol() == Rol.ADMIN
+                ? eventoRepository.findAll()
+                : eventoRepository.findByEstado(EstadoEvento.PUBLICADO);
+        return eventos.stream().map(EventoResponseDTO::desde).toList();
+    }
+
+    /**
+     * Lista los eventos creados por el usuario en cualquier estado, incluidos los cancelados
+     *
+     * @throws AccesoDenegadoException si el usuario no puede gestionar eventos
+     */
+    @Transactional(readOnly = true)
+    public List<EventoResponseDTO> listarEventosDeOrganizador(Long usuarioId) {
+        Usuario gestor = autorizacionService.obtenerGestorDeEventos(usuarioId);
+        return eventoRepository.findByOrganizadorId(gestor.getId()).stream()
                 .map(EventoResponseDTO::desde)
                 .toList();
     }
