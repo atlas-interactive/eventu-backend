@@ -1,6 +1,7 @@
 package com.eventu.controllers;
 
 import com.eventu.services.CertificadoService;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class CertificadoController {
                                                     @AuthenticationPrincipal UsuarioAutenticado actual) {
         byte[] pdf = certificadoService.generarCertificadoPdf(actual.id(), eventoId);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=certificado.pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("certificado-evento-" + eventoId + ".pdf").build().toString())
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
