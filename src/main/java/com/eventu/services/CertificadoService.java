@@ -9,10 +9,12 @@ import com.eventu.repositories.AsistenciaRepository;
 import com.eventu.repositories.EventoRepository;
 import com.eventu.repositories.InscripcionRepository;
 import com.eventu.util.Mensajes;
+import com.eventu.util.TextoPdf;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.stereotype.Service;
@@ -20,12 +22,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
-/** Generación del certificado de asistencia en PDF*/
+/** Generación del certificado de asistencia en PDF */
 @Service
 public class CertificadoService {
+
+    private static final DateTimeFormatter FECHA_LARGA =
+            DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale.of("es", "CO"));
 
     private final EventoRepository eventoRepository;
     private final InscripcionRepository inscripcionRepository;
@@ -60,61 +66,81 @@ public class CertificadoService {
         }
 
         try {
-            return construirPdf(inscripcion.getUsuario().getNombre(), evento.getTitulo(), evento.getFechaInicio());
+            return construirPdf(inscripcion.getUsuario().getNombre(), evento);
         } catch (IOException e) {
             throw new IllegalStateException("Error al generar el certificado en PDF.", e);
         }
     }
 
-    private byte[] construirPdf(String nombreUsuario, String tituloEvento, LocalDateTime fechaEvento) throws IOException {
-        try (PDDocument document = new PDDocument()) {
-            PDPage page = new PDPage(PDRectangle.A4);
-            document.addPage(page);
+    /** Certificado en una hoja A4 horizontal, con doble marco y el texto centrado */
+    private byte[] construirPdf(String nombreUsuario, Evento evento) throws IOException {
+        PDFont negrita = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
+        PDFont normal = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+        PDRectangle hoja = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
+        float ancho = hoja.getWidth();
+        float alto = hoja.getHeight();
 
-            try (PDPageContentStream content = new PDPageContentStream(document, page)) {
-                PDType1Font tituloFont = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
-                PDType1Font textoFont = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+        try (PDDocument documento = new PDDocument()) {
+            PDPage pagina = new PDPage(hoja);
+            documento.addPage(pagina);
 
-                content.beginText();
-                content.setFont(tituloFont, 22);
-                content.newLineAtOffset(80, 720);
-                content.showText("Certificado de Participacion");
-                content.endText();
+            try (PDPageContentStream contenido = new PDPageContentStream(documento, pagina)) {
+                contenido.setLineWidth(3);
+                contenido.addRect(25, 25, ancho - 50, alto - 50);
+                contenido.stroke();
+                contenido.setLineWidth(1);
+                contenido.addRect(35, 35, ancho - 70, alto - 70);
+                contenido.stroke();
 
-                content.beginText();
-                content.setFont(textoFont, 13);
-                content.newLineAtOffset(80, 660);
-                content.showText("EventU certifica que");
-                content.endText();
+                float y = alto - 150;
+                centrar(contenido, negrita, 30, ancho, y, "CERTIFICADO DE ASISTENCIA");
+                y -= 70;
+                centrar(contenido, normal, 14, ancho, y, "EventU certifica que");
+                y -= 50;
+                centrar(contenido, negrita, 26, ancho, y, nombreUsuario);
+                y -= 45;
+                centrar(contenido, normal, 14, ancho, y, "asistió al evento");
+                y -= 42;
+                centrar(contenido, negrita, 20, ancho, y, evento.getTitulo());
+                y -= 40;
+                centrar(contenido, normal, 13, ancho, y, detalleDelEvento(evento));
+                y -= 24;
+                if (evento.getOrganizador() != null && evento.getOrganizador().getNombre() != null) {
+                    centrar(contenido, normal, 13, ancho, y, "Organizado por " + evento.getOrganizador().getNombre());
+                }
 
-                content.beginText();
-                content.setFont(tituloFont, 16);
-                content.newLineAtOffset(80, 630);
-                content.showText(nombreUsuario);
-                content.endText();
-
-                content.beginText();
-                content.setFont(textoFont, 13);
-                content.newLineAtOffset(80, 600);
-                content.showText("asistio y participo en el evento:");
-                content.endText();
-
-                content.beginText();
-                content.setFont(tituloFont, 15);
-                content.newLineAtOffset(80, 570);
-                content.showText(tituloEvento);
-                content.endText();
-
-                content.beginText();
-                content.setFont(textoFont, 12);
-                content.newLineAtOffset(80, 540);
-                content.showText("Fecha: " + fechaEvento.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-                content.endText();
+                centrar(contenido, normal, 10, ancho, 60,
+                        "Fecha de emisión: " + LocalDate.now().format(FECHA_LARGA));
             }
 
             ByteArrayOutputStream salida = new ByteArrayOutputStream();
-            document.save(salida);
+            documento.save(salida);
             return salida.toByteArray();
         }
+    }
+
+    /** "Realizado el 20 de noviembre de 2026 en Auditorio", omitiendo lo que no tenga el evento */
+    private static String detalleDelEvento(Evento evento) {
+        StringBuilder detalle = new StringBuilder("Realizado");
+        if (evento.getFechaInicio() != null) {
+            detalle.append(" el ").append(evento.getFechaInicio().format(FECHA_LARGA));
+        }
+        if (evento.getUbicacion() != null && !evento.getUbicacion().isBlank()) {
+            detalle.append(" en ").append(evento.getUbicacion().trim());
+        }
+        return detalle.toString();
+    }
+
+    /** Escribe el texto centrado; si es más ancho que la hoja, reduce la letra hasta que quepa */
+    private static void centrar(PDPageContentStream contenido, PDFont fuente, float tamano, float anchoHoja, float y,
+                                String texto) throws IOException {
+        String limpio = TextoPdf.compatible(texto, fuente);
+        float tamanoFinal = TextoPdf.tamanoQueCabe(limpio, fuente, tamano, 9, anchoHoja - 120);
+        float x = (anchoHoja - TextoPdf.ancho(limpio, fuente, tamanoFinal)) / 2;
+        contenido.beginText();
+        contenido.setFont(fuente, tamanoFinal);
+        contenido.newLineAtOffset(x, y);
+        contenido.showText(limpio);
+        contenido.endText();
     }
 }
