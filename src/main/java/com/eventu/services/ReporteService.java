@@ -21,6 +21,7 @@ import com.eventu.exceptions.RecursoNoEncontradoException;
 import com.eventu.models.Evento;
 import com.eventu.repositories.EventoRepository;
 import com.eventu.util.Mensajes;
+import com.eventu.util.TextoPdf;
 
 /** Reporte en PDF de los inscritos y asistentes de un evento (HU-17) */
 @Service
@@ -165,44 +166,22 @@ public class ReporteService {
         contenido.beginText();
         contenido.setFont(fuente, tamano);
         contenido.newLineAtOffset(x, y);
-        contenido.showText(compatible(texto, fuente));
+        contenido.showText(TextoPdf.compatible(texto, fuente));
         contenido.endText();
     }
 
     /** Corta el texto con "..." si no cabe en el ancho de la columna */
     private static String recortar(String texto, PDFont fuente, float tamano, float ancho) throws IOException {
-        String limpio = compatible(texto, fuente);
-        if (anchoDe(limpio, fuente, tamano) <= ancho) {
+        String limpio = TextoPdf.compatible(texto, fuente);
+        if (TextoPdf.ancho(limpio, fuente, tamano) <= ancho) {
             return limpio;
         }
         String puntos = "...";
         int fin = limpio.length();
-        while (fin > 0 && anchoDe(limpio.substring(0, fin) + puntos, fuente, tamano) > ancho) {
+        while (fin > 0 && TextoPdf.ancho(limpio.substring(0, fin) + puntos, fuente, tamano) > ancho) {
             fin--;
         }
         return limpio.substring(0, fin) + puntos;
-    }
-
-    private static float anchoDe(String texto, PDFont fuente, float tamano) throws IOException {
-        return fuente.getStringWidth(texto) / 1000 * tamano;
-    }
-
-    /**
-     * Las fuentes estándar del PDF solo traen los caracteres de WinAnsi (incluye tildes y ñ).
-     * Cualquier otro carácter (emojis, otros alfabetos) haría fallar todo el reporte, así que se cambia por "?"
-     */
-    private static String compatible(String texto, PDFont fuente) {
-        StringBuilder resultado = new StringBuilder(texto.length());
-        texto.codePoints().forEach(c -> {
-            String caracter = new String(Character.toChars(c));
-            try {
-                fuente.encode(caracter);
-                resultado.append(caracter);
-            } catch (IllegalArgumentException | IOException e) {
-                resultado.append('?');
-            }
-        });
-        return resultado.toString();
     }
 
     private static String valor(String texto) {
