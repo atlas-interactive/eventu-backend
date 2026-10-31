@@ -21,6 +21,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.eventu.dto.EventoFiltroRequestDTO;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.RequestParam;
+import java.time.LocalDate;
 
 import java.util.List;
 import java.util.Map;
@@ -38,10 +42,16 @@ public class EventoController {
         this.inscripcionService = inscripcionService;
     }
 
-    /** Lista los eventos publicados; un administrador ve todos, incluidos los cancelados */
+    /*Lista los eventos publicados (un administrador ve todos, incluidos los cancelados), con filtros opcionales*/
     @GetMapping
-    public ResponseEntity<List<EventoResponseDTO>> listarEventos(@AuthenticationPrincipal UsuarioAutenticado actual) {
-        return ResponseEntity.ok(eventoService.listarEventos(actual.id()));
+    public ResponseEntity<List<EventoResponseDTO>> listarEventos(
+            @RequestParam(required = false) Long categoriaId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            @RequestParam(required = false) String texto,
+            @AuthenticationPrincipal UsuarioAutenticado actual) {
+        EventoFiltroRequestDTO filtro = new EventoFiltroRequestDTO(categoriaId, fechaDesde, fechaHasta, texto);
+        return ResponseEntity.ok(eventoService.listarEventos(actual.id(), filtro));
     }
 
     /** Lista los eventos del organizador que consulta, en cualquier estado (incluidos los cancelados) */
