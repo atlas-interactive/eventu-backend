@@ -22,6 +22,9 @@ import com.eventu.util.Mensajes;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.eventu.dto.EventoFiltroRequestDTO;
+import com.eventu.repositories.EventoEspecificaciones;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -88,6 +91,29 @@ public class EventoService {
                 ? eventoRepository.findAll()
                 : eventoRepository.findByEstado(EstadoEvento.PUBLICADO);
         return eventos.stream().map(EventoResponseDTO::desde).toList();
+    }
+
+    private static final int MAX_TEXTO_BUSQUEDA = 100;
+
+    @Transactional(readOnly = true)
+    public List<EventoResponseDTO> listarEventos(Long usuarioId, EventoFiltroRequestDTO filtro) {
+        if (filtro.estaVacio()) {
+            return listarEventos(usuarioId);
+        }
+        if (filtro.fechaDesde() != null && filtro.fechaHasta() != null && filtro.fechaDesde().isAfter(filtro.fechaHasta())) {
+            throw new SolicitudInvalidaException("La fecha inicial no puede ser posterior a la fecha final.");
+        }
+        if (filtro.texto() != null && filtro.texto().length() > MAX_TEXTO_BUSQUEDA) {
+            throw new SolicitudInvalidaException("El texto de búsqueda no puede superar los " + MAX_TEXTO_BUSQUEDA + " caracteres.");
+        }
+
+        Usuario usuario = autorizacionService.obtenerUsuario(usuarioId);
+        boolean soloPublicados = usuario.getRol() != Rol.ADMIN;
+        return eventoRepository
+                .findAll(EventoEspecificaciones.filtrar(filtro, soloPublicados), Sort.by("fechaInicio").ascending())
+                .stream()
+                .map(EventoResponseDTO::desde)
+                .toList();
     }
 
     /**
