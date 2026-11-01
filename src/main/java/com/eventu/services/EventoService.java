@@ -116,6 +116,19 @@ public class EventoService {
                 .toList();
     }
 
+    /**Devuelve el detalle de un evento (HU-09). Un evento cancelado solo lo ve su organizador o un administrador*/
+    @Transactional(readOnly = true)
+    public EventoResponseDTO obtenerEvento(Long eventoId, Long usuarioId) {
+        Usuario usuario = autorizacionService.obtenerUsuario(usuarioId);
+        Evento evento = eventoRepository.findById(eventoId)
+                .orElseThrow(() -> new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO));
+
+        if (evento.getEstado() == EstadoEvento.CANCELADO && !autorizacionService.puedeModificarEvento(usuario, evento)) {
+            throw new RecursoNoEncontradoException(Mensajes.EVENTO_NO_ENCONTRADO);
+        }
+        return EventoResponseDTO.desde(evento);
+    }
+
     /**
      * Lista los eventos creados por el usuario en cualquier estado, incluidos los cancelados
      *
