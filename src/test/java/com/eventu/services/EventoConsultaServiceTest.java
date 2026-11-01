@@ -1,5 +1,6 @@
 package com.eventu.services;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -12,6 +13,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,7 @@ import com.eventu.models.Usuario;
 import com.eventu.repositories.CategoriaRepository;
 import com.eventu.repositories.EventoRepository;
 import com.eventu.repositories.InscripcionRepository;
+import com.eventu.exceptions.RecursoNoEncontradoException;
 
 /** Pruebas de HU-08 (consulta y filtro de eventos) y HU-09 (detalle de un evento) */
 @ExtendWith(MockitoExtension.class)
@@ -110,6 +113,55 @@ class EventoConsultaServiceTest {
         assertThrows(SolicitudInvalidaException.class, () -> servicio.listarEventos(USUARIO_ID, filtro));
 
         verifyNoInteractions(eventoRepository);
+    }
+
+    // HU-09: detalle
+
+    @Test
+    void obtenerEvento_publicado_devuelveElDetalleCompleto() {
+        when(autorizacionService.obtenerUsuario(USUARIO_ID)).thenReturn(usuario(USUARIO_ID, Rol.USUARIO));
+        when(eventoRepository.findById(EVENTO_ID)).thenReturn(Optional.of(evento(EstadoEvento.PUBLICADO)));
+
+        EventoResponseDTO detalle = servicio.obtenerEvento(EVENTO_ID, USUARIO_ID);
+
+        assertEquals("Feria de ciencias", detalle.titulo());
+        assertEquals("Auditorio", detalle.ubicacion());
+        assertEquals("Académico", detalle.categoriaNombre());
+        assertEquals(40, detalle.cuposDisponibles());
+        assertEquals("PUBLICADO", detalle.estado());
+    }
+
+    @Test
+    void obtenerEvento_inexistente_lanzaNoEncontrado() {
+        when(autorizacionService.obtenerUsuario(USUARIO_ID)).thenReturn(usuario(USUARIO_ID, Rol.USUARIO));
+        when(eventoRepository.findById(EVENTO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNoEncontradoException.class, () -> servicio.obtenerEvento(EVENTO_ID, USUARIO_ID));
+    }
+
+    @Test
+    void obtenerEvento_canceladoParaUsuarioComun_lanzaNoEncontrado() {
+        Usuario usuario = usuario(USUARIO_ID, Rol.USUARIO);
+        Evento cancelado = evento(EstadoEvento.CANCELADO);
+        when(autorizacionService.obtenerUsuario(USUARIO_ID)).thenReturn(usuario);
+        when(eventoRepository.findById(EVENTO_ID)).thenReturn(Optional.of(cancelado));
+        when(autorizacionService.puedeModificarEvento(usuario, cancelado)).thenReturn(false);
+
+        assertThrows(RecursoNoEncontradoException.class, () -> servicio.obtenerEvento(EVENTO_ID, USUARIO_ID));
+    }
+
+    @Test
+    void obtenerEvento_canceladoParaAdminOOrganizadorDueno_devuelveElDetalle() {
+        Usuario admin = usuario(ADMIN_ID, Rol.ADMIN);
+        Evento cancelado = evento(EstadoEvento.CANCELADO);
+        when(autorizacionService.obtenerUsuario(ADMIN_ID)).thenReturn(admin);
+        when(eventoRepository.findById(EVENTO_ID)).thenReturn(Optional.of(cancelado));
+        when(autorizacionService.puedeModificarEvento(admin, cancelado)).thenReturn(true);
+
+        EventoResponseDTO detalle = servicio.obtenerEvento(EVENTO_ID, ADMIN_ID);
+
+        assertEquals("CANCELADO", detalle.estado());
+        assertTrue(detalle.cuposMaximos() > 0);
     }
 
     // Utilidades
