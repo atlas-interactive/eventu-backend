@@ -94,4 +94,10 @@ public class EventoController {
     public ResponseEntity<List<InscritoResponseDTO>> listarInscritos(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado actual) {
         return ResponseEntity.ok(inscripcionService.listarInscritosDeEvento(id, actual.id()));
     }
+
+    /**Consulta el detalle de un evento: descripción, fecha, lugar, categoría, cupos y organizador*/
+    @GetMapping("/{id}")
+    public ResponseEntity<EventoResponseDTO> obtenerEvento(@PathVariable Long id, @AuthenticationPrincipal UsuarioAutenticado actual) {
+        return ResponseEntity.ok(eventoService.obtenerEvento(id, actual.id()));
+    }
 }
