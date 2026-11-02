@@ -14,7 +14,9 @@ create table usuarios (
     rol                  varchar(20)  not null
                          constraint usuarios_rol_check check (rol in ('USUARIO', 'ORGANIZADOR', 'ADMIN')),
     creado_en            timestamp    default current_timestamp,
-    codigo_institucional varchar(20)
+    codigo_institucional varchar(20),
+    activo               boolean      not null default true,
+    password_actualizada_en timestamp
 );
 
 create table categorias (
@@ -75,6 +77,16 @@ create table logs (
     motivo     text
 );
 
+create table tokens_recuperacion (
+    id          bigserial   primary key,
+    usuario_id  bigint      not null references usuarios (id),
+    token_hash  varchar(64) not null unique,
+    expira_en   timestamp   not null,
+    usado_en    timestamp,
+    creado_en   timestamp   not null default now()
+);
+create index if not exists idx_tokens_recuperacion_usuario on tokens_recuperacion (usuario_id);
+
 -- Seguridad: sin politicas, solo el backend (rol postgres, que ignora RLS) puede leer y escribir.
 alter table usuarios      enable row level security;
 alter table categorias    enable row level security;
@@ -82,6 +94,7 @@ alter table eventos       enable row level security;
 alter table inscripciones enable row level security;
 alter table asistencias   enable row level security;
 alter table logs          enable row level security;
+alter table tokens_recuperacion enable row level security;
 
 -- Categorias iniciales
 insert into categorias (nombre) values ('Académico'), ('Cultural'), ('Deportivo')
