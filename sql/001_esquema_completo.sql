@@ -40,6 +40,9 @@ create table eventos (
     categoria_id      bigint       references categorias (id)
 );
 
+create index if not exists idx_eventos_fecha_inicio on eventos (fecha_inicio);
+create index if not exists idx_eventos_categoria    on eventos (categoria_id);
+
 create table inscripciones (
     id                bigserial   primary key,
     usuario_id        bigint      references usuarios (id),

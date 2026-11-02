@@ -77,7 +77,7 @@ public class AuthService {
             logService.registrarExito(usuarioId, LogService.ACCION_REACTIVAR_CUENTA, LogService.ENTIDAD_USUARIO, usuarioId);
         }
 
-        logService.registrarExitoSinBloquear(usuarioId, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, usuarioId);
+        logService.registrarExito(usuarioId, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, usuarioId);
         return new ResultadoAutenticacion(usuario, cuentaReactivada);
     }
 

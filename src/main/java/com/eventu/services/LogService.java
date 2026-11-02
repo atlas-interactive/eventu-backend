@@ -66,16 +66,6 @@ public class LogService {
         logRepository.save(construir(usuarioId, accion, entidad, entidadId, EXITO, null));
     }
 
-    /** Log de éxito en transacción independiente: si falla, no interrumpe la operación */
-    public void registrarExitoSinBloquear(Long usuarioId, String accion, String entidad, Long entidadId) {
-        try {
-            transaccionIndependiente.executeWithoutResult(estado ->
-                    logRepository.save(construir(usuarioId, accion, entidad, entidadId, EXITO, null)));
-        } catch (RuntimeException e) {
-            LOG.error("No se pudo registrar el log de la acción {}", accion, e);
-        }
-    }
-
     /**
      * Registra un intento rechazado en una transacción independiente, porque la transacción de la operación se revierte cuando se lanza la excepción.
      * Un error al guardar el log no interrumpe la respuesta al usuario
