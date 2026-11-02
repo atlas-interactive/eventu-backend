@@ -45,6 +45,10 @@ public class LogService {
     public static final String ACCION_CONSULTAR_INSCRITOS = "CONSULTAR_INSCRITOS";
     public static final String ACCION_GENERAR_REPORTE = "GENERAR_REPORTE";
     public static final String ACCION_DESACTIVAR_CUENTA = "DESACTIVAR_CUENTA";
+    public static final String ACCION_EDITAR_PERFIL = "EDITAR_PERFIL";
+    public static final String ACCION_CAMBIAR_CONTRASENA = "CAMBIAR_CONTRASENA";
+    public static final String ACCION_SOLICITAR_RECUPERACION = "SOLICITAR_RECUPERACION";
+    public static final String ACCION_RESTABLECER_CONTRASENA = "RESTABLECER_CONTRASENA";
 
     private static final Logger LOG = LoggerFactory.getLogger(LogService.class);
 

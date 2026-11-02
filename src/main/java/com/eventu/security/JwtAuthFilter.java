@@ -1,5 +1,6 @@
 package com.eventu.security;
 
+import com.eventu.models.Usuario;
 import com.eventu.repositories.UsuarioRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -45,15 +48,32 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.validarYObtenerClaims(cabecera.substring(PREFIJO.length()));
                 Long id = Long.valueOf(claims.getSubject());
 
-                usuarioRepository.findById(id).filter(usuario -> !Boolean.FALSE.equals(usuario.getActivo())).ifPresent(usuario -> {
-                    var principal = new UsuarioAutenticado(usuario.getId(), usuario.getCorreo(), usuario.getRol());
-                    var autenticacion = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name())));
-                    SecurityContextHolder.getContext().setAuthentication(autenticacion);
-                });
+                usuarioRepository.findById(id)
+                        .filter(usuario -> !Boolean.FALSE.equals(usuario.getActivo()))
+                        .filter(usuario -> !emitidoAntesDelCambioDeContrasena(claims, usuario))
+                        .ifPresent(usuario -> {
+                            var principal = new UsuarioAutenticado(usuario.getId(), usuario.getCorreo(), usuario.getRol());
+                            var autenticacion = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name())));
+                            SecurityContextHolder.getContext().setAuthentication(autenticacion);
+                        });
             } catch (JwtException | IllegalArgumentException e) {
                 LOG.warn("Token JWT rechazado en {} {}: {}", request.getMethod(), request.getRequestURI(), e.getClass().getSimpleName());
             }
         }
         chain.doFilter(request, response);
+    }
+
+    /**
+     * Un token emitido antes del último cambio de contraseña ya no se acepta: así restablecer la contraseña
+     * cierra las sesiones abiertas con la anterior. Se compara en segundos porque el JWT guarda la fecha sin milisegundos
+     */
+    static boolean emitidoAntesDelCambioDeContrasena(Claims claims, Usuario usuario) {
+        LocalDateTime cambio = usuario.getPasswordActualizadaEn();
+        if (cambio == null || claims.getIssuedAt() == null) {
+            return false;
+        }
+        long emitidoSegundos = claims.getIssuedAt().toInstant().getEpochSecond();
+        long cambioSegundos = cambio.atZone(ZoneId.systemDefault()).toEpochSecond();
+        return emitidoSegundos < cambioSegundos;
     }
 }

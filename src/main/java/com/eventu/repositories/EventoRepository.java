@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,9 @@ public interface EventoRepository extends JpaRepository<Evento, Long>, JpaSpecif
 
     /** Todos los eventos de un organizador, en cualquier estado */
     List<Evento> findByOrganizadorId(Long organizadorId);
+
+    /** Indica si el organizador tiene eventos en ese estado que todavía no han empezado */
+    boolean existsByOrganizadorIdAndEstadoAndFechaInicioAfter(Long organizadorId, EstadoEvento estado, LocalDateTime fecha);
 
     /** Cuenta los eventos de una categoría en un estado dado (por ejemplo, los publicados) */
     long countByCategoriaIdAndEstado(Long categoriaId, EstadoEvento estado);

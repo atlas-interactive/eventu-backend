@@ -15,4 +15,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByCorreoIgnoreCase(String correo);
     List<Usuario> findByCorreoContainingIgnoreCaseOrNombreContainingIgnoreCase(String correo, String nombre);
     List<Usuario> findByRolOrderByNombreAsc(Rol rol);
+
+    /** Cuenta las cuentas activas con un rol, para no dejar la plataforma sin administradores */
+    long countByRolAndActivoTrue(Rol rol);
 }

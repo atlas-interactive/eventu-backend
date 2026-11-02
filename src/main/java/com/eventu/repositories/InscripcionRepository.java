@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,9 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> 
 
     /** Inscripciones de un evento en un estado dado (por ejemplo, las activas al cancelarlo) */
     List<Inscripcion> findByEventoIdAndEstado(Long eventoId, EstadoInscripcion estado);
+
+    /** Inscripciones del usuario en un estado dado cuyos eventos empiezan después de esa fecha */
+    List<Inscripcion> findByUsuarioIdAndEstadoAndEventoFechaInicioAfter(Long usuarioId, EstadoInscripcion estado, LocalDateTime fecha);
 
     Optional<Inscripcion> findByCodigoQr(String codigoQr);
 
