@@ -2,9 +2,12 @@ package com.eventu.models;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
@@ -24,6 +27,11 @@ public class Log {
 
     @Column(name = "usuario_id")
     private Long usuarioId;
+
+    /** Usuario que hizo la operación, solo de lectura para la consulta de logs (HU-20); el registro se guarda con usuarioId */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", insertable = false, updatable = false)
+    private Usuario usuario;
 
     @Column(nullable = false, length = 50)
     private String accion;
@@ -52,6 +60,8 @@ public class Log {
     public void setFecha(LocalDateTime fecha) { this.fecha = fecha; }
     public Long getUsuarioId() { return usuarioId; }
     public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
     public String getAccion() { return accion; }
     public void setAccion(String accion) { this.accion = accion; }
     public String getEntidad() { return entidad; }

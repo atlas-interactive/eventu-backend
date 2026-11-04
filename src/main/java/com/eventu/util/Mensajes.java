@@ -11,6 +11,7 @@ public final class Mensajes {
     public static final String EVENTO_NO_ENCONTRADO = "Evento no encontrado.";
     public static final String CATEGORIA_NO_ENCONTRADA = "Categoría no encontrada.";
     public static final String INSCRIPCION_NO_ENCONTRADA = "Inscripción no encontrada.";
+    public static final String RANGO_FECHAS_INVALIDO = "La fecha inicial no puede ser posterior a la fecha final.";
     public static final String SIN_PERMISO_GESTIONAR_EVENTOS = "No tienes permisos para gestionar eventos.";
     public static final String SIN_PERMISO_ACCION = "No tiene permisos para esta acción.";
     public static final String SOLO_ADMINISTRADOR = "Solo un administrador puede realizar esta acción.";

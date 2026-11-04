@@ -101,7 +101,7 @@ public class EventoService {
             return listarEventos(usuarioId);
         }
         if (filtro.fechaDesde() != null && filtro.fechaHasta() != null && filtro.fechaDesde().isAfter(filtro.fechaHasta())) {
-            throw new SolicitudInvalidaException("La fecha inicial no puede ser posterior a la fecha final.");
+            throw new SolicitudInvalidaException(Mensajes.RANGO_FECHAS_INVALIDO);
         }
         if (filtro.texto() != null && filtro.texto().length() > MAX_TEXTO_BUSQUEDA) {
             throw new SolicitudInvalidaException("El texto de búsqueda no puede superar los " + MAX_TEXTO_BUSQUEDA + " caracteres.");
