@@ -12,7 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 /**
- * Correos sobre la seguridad de la cuenta: el enlace para restablecer la contraseña y el aviso de que cambió.
+ * Correos sobre la cuenta: el enlace para confirmar el correo, el enlace para restablecer la contraseña y el aviso de que cambió.
  * Corren después de confirmar la transacción y en otro hilo, así un fallo de SendGrid no revierte el cambio
  * ni demora la respuesta
  */
@@ -23,6 +23,7 @@ public class NotificadorCuenta {
     private static final DateTimeFormatter FORMATO_FECHA =
             DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy, h:mm a", Locale.forLanguageTag("es-CO"));
     static final String RUTA_RESTABLECER = "/restablecer-contrasena?token=";
+    static final String RUTA_CONFIRMAR = "/confirmar-correo?token=";
 
     private final CorreoService correoService;
     private final String urlWeb;
@@ -31,6 +32,17 @@ public class NotificadorCuenta {
     public NotificadorCuenta(CorreoService correoService, @Value("${eventu.web.url:http://localhost:5173}") String urlWeb) {
         this.correoService = correoService;
         this.urlWeb = urlWeb.endsWith("/") ? urlWeb.substring(0, urlWeb.length() - 1) : urlWeb;
+    }
+
+    /** Envía el enlace de confirmación de una cuenta nueva; si falla, el usuario puede pedir otro */
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void alSolicitarConfirmacion(ConfirmacionCorreoSolicitada hecho) {
+        try {
+            correoService.enviar(hecho.correo(), "Confirma tu correo en EventU", textoConfirmacion(hecho));
+        } catch (RuntimeException e) {
+            LOG.error("No se pudo enviar el enlace de confirmación a {}", hecho.correo(), e);
+        }
     }
 
     /** Envía el enlace de recuperación; si falla, el usuario puede pedir otro */
@@ -53,6 +65,16 @@ public class NotificadorCuenta {
         } catch (RuntimeException e) {
             LOG.error("No se pudo avisar el cambio de contraseña a {}", hecho.correo(), e);
         }
+    }
+
+    String textoConfirmacion(ConfirmacionCorreoSolicitada hecho) {
+        return "Hola, " + hecho.nombre() + ".\n\n"
+                + "Gracias por registrarte en EventU. Para activar tu cuenta, confirma tu correo abriendo este enlace:\n\n"
+                + urlWeb + RUTA_CONFIRMAR + hecho.token() + "\n\n"
+                + "El enlace vence el " + hecho.expiraEn().format(FORMATO_FECHA) + ". "
+                + "Si vence, puedes pedir uno nuevo desde la pantalla de inicio de sesión.\n\n"
+                + "Si no creaste esta cuenta, ignora este correo.\n\n"
+                + "EventU - Universidad de los Llanos";
     }
 
     String textoRecuperacion(RecuperacionContrasenaSolicitada hecho) {

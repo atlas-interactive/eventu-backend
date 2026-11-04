@@ -54,6 +54,10 @@ public class Usuario {
     @Column(name = "password_actualizada_en")
     private LocalDateTime passwordActualizadaEn;
 
+    /** Momento en que el usuario abrió el enlace de confirmación; null mientras no lo haga */
+    @Column(name = "correo_confirmado_en")
+    private LocalDateTime correoConfirmadoEn;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -80,4 +84,7 @@ public class Usuario {
 
     public LocalDateTime getPasswordActualizadaEn() { return passwordActualizadaEn; }
     public void setPasswordActualizadaEn(LocalDateTime passwordActualizadaEn) { this.passwordActualizadaEn = passwordActualizadaEn; }
+
+    public LocalDateTime getCorreoConfirmadoEn() { return correoConfirmadoEn; }
+    public void setCorreoConfirmadoEn(LocalDateTime correoConfirmadoEn) { this.correoConfirmadoEn = correoConfirmadoEn; }
 }

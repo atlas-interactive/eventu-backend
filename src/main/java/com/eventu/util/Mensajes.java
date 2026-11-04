@@ -19,6 +19,7 @@ public final class Mensajes {
     public static final String CATEGORIA_INACTIVA = "La categoría seleccionada no está activa.";
     public static final String LONGITUD_CONTRASENA = "La contraseña debe tener entre 8 y 72 caracteres.";
     public static final String CONTRASENA_INCORRECTA = "La contraseña ingresada no es correcta.";
+    public static final String REVISA_BANDEJA_Y_SPAM = "Revisa tu bandeja de entrada y, si no lo ves, la carpeta de spam.";
     public static final String ERROR_INTERNO = "Ocurrió un error inesperado. Intente nuevamente.";
 
     /** Clase de utilidad: no se instancia */
