@@ -70,6 +70,26 @@ class NotificadorCuentaTest {
         assertTrue(texto.contains("https://eventu.vercel.app/login"));
     }
 
+    @Test
+    void textoConfirmacion_traeElEnlaceConElTokenYLaFechaDeVencimiento() {
+        String texto = notificador.textoConfirmacion(
+                new ConfirmacionCorreoSolicitada(CORREO, "Laura Gomez", "xyz789", LocalDateTime.of(2026, 11, 5, 9, 0)));
+
+        assertTrue(texto.contains("https://eventu.vercel.app/confirmar-correo?token=xyz789"));
+        assertFalse(texto.contains(".app//"));
+        assertTrue(texto.contains("5 de noviembre de 2026"));
+    }
+
+    @Test
+    void alSolicitarConfirmacion_enviaElEnlaceYSiSendGridFallaNoPropagaElError() {
+        doThrow(new RestClientException("SendGrid no responde")).when(correoService).enviar(anyString(), anyString(), anyString());
+
+        notificador.alSolicitarConfirmacion(
+                new ConfirmacionCorreoSolicitada(CORREO, "Laura Gomez", "xyz789", LocalDateTime.of(2026, 11, 5, 9, 0)));
+
+        verify(correoService).enviar(eq(CORREO), eq("Confirma tu correo en EventU"), anyString());
+    }
+
     private RecuperacionContrasenaSolicitada solicitud() {
         return new RecuperacionContrasenaSolicitada(CORREO, "Laura Gomez", "abc123", LocalDateTime.of(2026, 11, 2, 14, 35));
     }

@@ -1,18 +1,4 @@
--- =============================================================================
--- 006: confirmación del correo al registrarse.
---
--- El backend usa ddl-auto=validate: este script se debe ejecutar en Supabase ANTES de desplegar
--- el backend que trae estos cambios, o la aplicación no arranca.
--- Todas las sentencias se pueden volver a ejecutar sin riesgo.
---
--- La confirmación solo se exige si eventu.registro.confirmar-correo=true
--- (variable EVENTU_REGISTRO_CONFIRMAR_CORREO en Render). Por defecto está apagada.
--- =============================================================================
 
--- Momento en que el usuario abrió el enlace de confirmación (null = sin confirmar).
--- Las cuentas que ya existían al agregar la columna quedan confirmadas, para no bloquear a nadie.
--- La actualización corre solo la vez que se crea la columna: si el script se repite, no confirma
--- las cuentas nuevas que todavía no abrieron su enlace.
 do $$
 begin
     if not exists (select 1 from information_schema.columns
