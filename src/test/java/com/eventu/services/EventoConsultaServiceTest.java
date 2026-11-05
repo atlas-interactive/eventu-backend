@@ -64,14 +64,13 @@ class EventoConsultaServiceTest {
     // HU-08: filtros
 
     @Test
-    void listarConFiltro_sinNingunFiltro_seComportaComoElListadoGeneral() {
+    void listarConFiltro_sinNingunFiltro_tambienSaleOrdenadoPorFecha() {
         when(autorizacionService.obtenerUsuario(USUARIO_ID)).thenReturn(usuario(USUARIO_ID, Rol.USUARIO));
-        when(eventoRepository.findByEstado(EstadoEvento.PUBLICADO)).thenReturn(List.of());
+        when(eventoRepository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of());
 
         servicio.listarEventos(USUARIO_ID, new EventoFiltroRequestDTO(null, null, null, "   "));
 
-        verify(eventoRepository).findByEstado(EstadoEvento.PUBLICADO);
-        verify(eventoRepository, never()).findAll(any(Specification.class), any(Sort.class));
+        verify(eventoRepository).findAll(any(Specification.class), eq(EventoService.ORDEN_LISTADO));
     }
 
     @Test
@@ -84,7 +83,7 @@ class EventoConsultaServiceTest {
 
         assertEquals(1, resultado.size());
         assertEquals("Académico", resultado.get(0).categoriaNombre());
-        verify(eventoRepository).findAll(any(Specification.class), eq(Sort.by("fechaInicio").ascending()));
+        verify(eventoRepository).findAll(any(Specification.class), eq(EventoService.ORDEN_LISTADO));
     }
 
     @Test

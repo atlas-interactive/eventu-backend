@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.eventu.dto.EventoFiltroRequestDTO;
 import com.eventu.repositories.EventoEspecificaciones;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 
@@ -80,40 +81,24 @@ public class EventoService {
         return guardado;
     }
 
-    /**
-     * Lista los eventos que el usuario puede ver: los publicados, y para un administrador también los cancelados.
-     * Un organizador ve sus propios eventos cancelados en {@link #listarEventosDeOrganizador(Long)}
-     */
-    @Transactional(readOnly = true)
-    public List<EventoResponseDTO> listarEventos(Long usuarioId) {
-        Usuario usuario = autorizacionService.obtenerUsuario(usuarioId);
-        List<Evento> eventos = usuario.getRol() == Rol.ADMIN
-                ? eventoRepository.findAll()
-                : eventoRepository.findByEstado(EstadoEvento.PUBLICADO);
-        return eventos.stream().map(EventoResponseDTO::desde).toList();
-    }
-
     private static final int MAX_TEXTO_BUSQUEDA = 100;
 
+    /** Orden de todos los listados: primero los que empiezan antes; el id desempata los que empiezan a la misma hora */
+    static final Sort ORDEN_LISTADO = Sort.by("fechaInicio").ascending().and(Sort.by("id").ascending());
+
+    /**
+     * Lista los eventos que el usuario puede ver, con filtros opcionales: los publicados, y para un administrador
+     * también los cancelados. Un organizador ve sus propios eventos cancelados en
+     * {@link #listarEventosDeOrganizador(Long, EventoFiltroRequestDTO)}
+     *
+     * @throws SolicitudInvalidaException si el rango de fechas está invertido o el texto es demasiado largo
+     */
     @Transactional(readOnly = true)
     public List<EventoResponseDTO> listarEventos(Long usuarioId, EventoFiltroRequestDTO filtro) {
-        if (filtro.estaVacio()) {
-            return listarEventos(usuarioId);
-        }
-        if (filtro.fechaDesde() != null && filtro.fechaHasta() != null && filtro.fechaDesde().isAfter(filtro.fechaHasta())) {
-            throw new SolicitudInvalidaException(Mensajes.RANGO_FECHAS_INVALIDO);
-        }
-        if (filtro.texto() != null && filtro.texto().length() > MAX_TEXTO_BUSQUEDA) {
-            throw new SolicitudInvalidaException("El texto de búsqueda no puede superar los " + MAX_TEXTO_BUSQUEDA + " caracteres.");
-        }
-
+        validarFiltro(filtro);
         Usuario usuario = autorizacionService.obtenerUsuario(usuarioId);
         boolean soloPublicados = usuario.getRol() != Rol.ADMIN;
-        return eventoRepository
-                .findAll(EventoEspecificaciones.filtrar(filtro, soloPublicados), Sort.by("fechaInicio").ascending())
-                .stream()
-                .map(EventoResponseDTO::desde)
-                .toList();
+        return consultar(EventoEspecificaciones.filtrar(filtro, soloPublicados, null));
     }
 
     /**Devuelve el detalle de un evento (HU-09). Un evento cancelado solo lo ve su organizador o un administrador*/
@@ -130,14 +115,30 @@ public class EventoService {
     }
 
     /**
-     * Lista los eventos creados por el usuario en cualquier estado, incluidos los cancelados
+     * Lista los eventos creados por el usuario en cualquier estado, incluidos los cancelados, con los mismos filtros
+     * opcionales del listado general
      *
      * @throws AccesoDenegadoException si el usuario no puede gestionar eventos
+     * @throws SolicitudInvalidaException si el rango de fechas está invertido o el texto es demasiado largo
      */
     @Transactional(readOnly = true)
-    public List<EventoResponseDTO> listarEventosDeOrganizador(Long usuarioId) {
+    public List<EventoResponseDTO> listarEventosDeOrganizador(Long usuarioId, EventoFiltroRequestDTO filtro) {
         Usuario gestor = autorizacionService.obtenerGestorDeEventos(usuarioId);
-        return eventoRepository.findByOrganizadorId(gestor.getId()).stream()
+        validarFiltro(filtro);
+        return consultar(EventoEspecificaciones.filtrar(filtro, false, gestor.getId()));
+    }
+
+    private void validarFiltro(EventoFiltroRequestDTO filtro) {
+        if (filtro.fechaDesde() != null && filtro.fechaHasta() != null && filtro.fechaDesde().isAfter(filtro.fechaHasta())) {
+            throw new SolicitudInvalidaException(Mensajes.RANGO_FECHAS_INVALIDO);
+        }
+        if (filtro.texto() != null && filtro.texto().length() > MAX_TEXTO_BUSQUEDA) {
+            throw new SolicitudInvalidaException("El texto de búsqueda no puede superar los " + MAX_TEXTO_BUSQUEDA + " caracteres.");
+        }
+    }
+
+    private List<EventoResponseDTO> consultar(Specification<Evento> especificacion) {
+        return eventoRepository.findAll(especificacion, ORDEN_LISTADO).stream()
                 .map(EventoResponseDTO::desde)
                 .toList();
     }

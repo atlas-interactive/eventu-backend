@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -23,8 +24,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import com.eventu.dto.EventoActualizacionRequestDTO;
+import com.eventu.dto.EventoFiltroRequestDTO;
 import com.eventu.dto.EventoRequestDTO;
 import com.eventu.exceptions.AccesoDenegadoException;
 import com.eventu.exceptions.ConflictoException;
@@ -52,6 +56,7 @@ class EventoServiceTest {
     private static final Long ADMIN_ID = 1L;
     private static final Long EVENTO_ID = 100L;
     private static final Long CATEGORIA_ID = 5L;
+    private static final EventoFiltroRequestDTO SIN_FILTROS = new EventoFiltroRequestDTO(null, null, null, null);
 
     @Mock private EventoRepository eventoRepository;
     @Mock private CategoriaRepository categoriaRepository;
@@ -323,63 +328,62 @@ class EventoServiceTest {
     // Visibilidad de eventos cancelados: solo su organizador (en "mis eventos") y el administrador
 
     @Test
-    void listarEventos_comoUsuario_consultaSoloLosPublicados() {
+    void listarEventos_comoUsuario_devuelveLoQueEncuentraLaConsultaOrdenada() {
         when(autorizacionService.obtenerUsuario(USUARIO_ID)).thenReturn(usuario(USUARIO_ID, Rol.USUARIO));
-        when(eventoRepository.findByEstado(EstadoEvento.PUBLICADO))
+        when(eventoRepository.findAll(any(Specification.class), any(Sort.class)))
                 .thenReturn(List.of(evento(usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR), EstadoEvento.PUBLICADO, 10, 10)));
 
-        var eventos = servicio.listarEventos(USUARIO_ID);
+        var eventos = servicio.listarEventos(USUARIO_ID, SIN_FILTROS);
 
         assertEquals(1, eventos.size());
         assertEquals("PUBLICADO", eventos.get(0).estado());
-        verify(eventoRepository, never()).findAll();
-    }
-
-    @Test
-    void listarEventos_comoOrganizador_noIncluyeLosCanceladosEnElListadoGeneral() {
-        when(autorizacionService.obtenerUsuario(ORGANIZADOR_ID)).thenReturn(usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR));
-        when(eventoRepository.findByEstado(EstadoEvento.PUBLICADO)).thenReturn(List.of());
-
-        servicio.listarEventos(ORGANIZADOR_ID);
-
-        verify(eventoRepository).findByEstado(EstadoEvento.PUBLICADO);
-        verify(eventoRepository, never()).findAll();
+        verify(eventoRepository).findAll(any(Specification.class), eq(EventoService.ORDEN_LISTADO));
     }
 
     @Test
     void listarEventos_comoAdministrador_devuelveTodosIncluidosLosCancelados() {
         Usuario organizador = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
         when(autorizacionService.obtenerUsuario(ADMIN_ID)).thenReturn(usuario(ADMIN_ID, Rol.ADMIN));
-        when(eventoRepository.findAll()).thenReturn(List.of(
+        when(eventoRepository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(
                 evento(organizador, EstadoEvento.PUBLICADO, 10, 10),
                 evento(organizador, EstadoEvento.CANCELADO, 10, 10)));
 
-        var eventos = servicio.listarEventos(ADMIN_ID);
+        var eventos = servicio.listarEventos(ADMIN_ID, SIN_FILTROS);
 
         assertEquals(2, eventos.size());
         assertTrue(eventos.stream().anyMatch(e -> e.estado().equals("CANCELADO")));
-        verify(eventoRepository, never()).findByEstado(any(EstadoEvento.class));
     }
 
     @Test
-    void listarEventosDeOrganizador_devuelveSusEventosIncluidosLosCancelados() {
+    void listarEventosDeOrganizador_devuelveSusEventosIncluidosLosCanceladosOrdenados() {
         Usuario organizador = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
         when(autorizacionService.obtenerGestorDeEventos(ORGANIZADOR_ID)).thenReturn(organizador);
-        when(eventoRepository.findByOrganizadorId(ORGANIZADOR_ID)).thenReturn(List.of(
+        when(eventoRepository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(
                 evento(organizador, EstadoEvento.PUBLICADO, 10, 10),
                 evento(organizador, EstadoEvento.CANCELADO, 10, 10)));
 
-        var eventos = servicio.listarEventosDeOrganizador(ORGANIZADOR_ID);
+        var eventos = servicio.listarEventosDeOrganizador(ORGANIZADOR_ID, new EventoFiltroRequestDTO(CATEGORIA_ID, null, null, "feria"));
 
         assertEquals(2, eventos.size());
         assertTrue(eventos.stream().anyMatch(e -> e.estado().equals("CANCELADO")));
+        verify(eventoRepository).findAll(any(Specification.class), eq(EventoService.ORDEN_LISTADO));
     }
 
     @Test
     void listarEventosDeOrganizador_siNoPuedeGestionarEventos_lanzaAccesoDenegadoSinConsultarEventos() {
         doThrow(new AccesoDenegadoException("sin permiso")).when(autorizacionService).obtenerGestorDeEventos(USUARIO_ID);
 
-        assertThrows(AccesoDenegadoException.class, () -> servicio.listarEventosDeOrganizador(USUARIO_ID));
+        assertThrows(AccesoDenegadoException.class, () -> servicio.listarEventosDeOrganizador(USUARIO_ID, SIN_FILTROS));
+
+        verifyNoInteractions(eventoRepository);
+    }
+
+    @Test
+    void listarEventosDeOrganizador_conRangoDeFechasInvertido_lanzaSolicitudInvalidaSinConsultarEventos() {
+        when(autorizacionService.obtenerGestorDeEventos(ORGANIZADOR_ID)).thenReturn(usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR));
+        EventoFiltroRequestDTO filtro = new EventoFiltroRequestDTO(null, LocalDate.of(2026, 12, 10), LocalDate.of(2026, 12, 1), null);
+
+        assertThrows(SolicitudInvalidaException.class, () -> servicio.listarEventosDeOrganizador(ORGANIZADOR_ID, filtro));
 
         verifyNoInteractions(eventoRepository);
     }
