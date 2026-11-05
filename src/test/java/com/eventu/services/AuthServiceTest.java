@@ -2,6 +2,7 @@ package com.eventu.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -11,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,16 +20,23 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.eventu.dto.RegistroRequestDTO;
+import com.eventu.exceptions.AccesoDenegadoException;
 import com.eventu.exceptions.ConflictoException;
 import com.eventu.exceptions.CredencialesInvalidasException;
 import com.eventu.models.Rol;
 import com.eventu.models.Usuario;
+import com.eventu.notificaciones.ConfirmacionCorreoSolicitada;
+import com.eventu.repositories.TokenConfirmacionCorreoRepository;
 import com.eventu.repositories.UsuarioRepository;
 
-/** Pruebas de registro (HU-01) e inicio de sesión (HU-02), incluida la reactivación de cuentas desactivadas */
+/**
+ * Pruebas de registro (HU-01) e inicio de sesión (HU-02), incluida la reactivación de cuentas desactivadas
+ * y la confirmación de correo encendida y apagada
+ */
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
@@ -39,12 +48,20 @@ class AuthServiceTest {
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private LogService logService;
+    @Mock private TokenConfirmacionCorreoRepository tokenConfirmacionRepository;
+    @Mock private ApplicationEventPublisher publicador;
 
     private AuthService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new AuthService(usuarioRepository, passwordEncoder, logService);
+        servicio = servicioConConfirmacion(false);
+    }
+
+    private AuthService servicioConConfirmacion(boolean exigida) {
+        ConfirmacionCorreoService confirmacion = new ConfirmacionCorreoService(
+                usuarioRepository, tokenConfirmacionRepository, logService, publicador, exigida);
+        return new AuthService(usuarioRepository, passwordEncoder, logService, confirmacion);
     }
 
     // HU-01 escenario 3: correo de una cuenta desactivada
@@ -116,6 +133,96 @@ class AuthServiceTest {
         verify(usuarioRepository, never()).save(any());
         verify(logService, never()).registrarExito(any(), eq(LogService.ACCION_REACTIVAR_CUENTA), anyString(), any());
         verify(logService).registrarExito(USUARIO_ID, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, USUARIO_ID);
+    }
+
+    // Confirmación de correo
+
+    @Test
+    void registrarUsuario_conConfirmacionApagada_noEnviaCorreoNiDejaLaCuentaPendiente() {
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.empty());
+        when(usuarioRepository.save(any())).thenAnswer(invocacion -> conId(invocacion.getArgument(0)));
+
+        servicio.registrarUsuario(solicitudRegistro());
+
+        verify(tokenConfirmacionRepository, never()).save(any());
+        verify(publicador, never()).publishEvent(any());
+    }
+
+    @Test
+    void registrarUsuario_conConfirmacionEncendida_guardaElTokenYPublicaElCorreoDeConfirmacion() {
+        servicio = servicioConConfirmacion(true);
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.empty());
+        when(usuarioRepository.save(any())).thenAnswer(invocacion -> conId(invocacion.getArgument(0)));
+
+        Usuario guardado = servicio.registrarUsuario(solicitudRegistro());
+
+        assertNull(guardado.getCorreoConfirmadoEn());
+        verify(tokenConfirmacionRepository).save(any());
+        verify(publicador).publishEvent(any(ConfirmacionCorreoSolicitada.class));
+    }
+
+    @Test
+    void registrarUsuario_conConfirmacionEncendidaYCuentaSinConfirmar_lanzaConflictoSinReemplazarla() {
+        servicio = servicioConConfirmacion(true);
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.of(usuario(true)));
+
+        ConflictoException error = assertThrows(ConflictoException.class,
+                () -> servicio.registrarUsuario(solicitudRegistro()));
+
+        assertEquals(AuthService.REGISTRO_SIN_CONFIRMAR, error.getMessage());
+        assertTrue(error.getMessage().contains("spam"));
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void autenticar_conConfirmacionEncendidaYCorreoSinConfirmar_lanzaAccesoDenegadoYRegistraElFallo() {
+        servicio = servicioConConfirmacion(true);
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.of(usuario(true)));
+        when(passwordEncoder.matches(PASSWORD, HASH)).thenReturn(true);
+
+        AccesoDenegadoException error = assertThrows(AccesoDenegadoException.class,
+                () -> servicio.autenticar(CORREO, PASSWORD));
+
+        assertEquals(AuthService.CORREO_SIN_CONFIRMAR, error.getMessage());
+        verify(logService).registrarFallo(USUARIO_ID, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, USUARIO_ID, "Correo sin confirmar");
+        verify(logService, never()).registrarExito(any(), eq(LogService.ACCION_LOGIN), anyString(), any());
+    }
+
+    @Test
+    void autenticar_conConfirmacionEncendidaYPasswordIncorrecta_noRevelaQueFaltaConfirmar() {
+        servicio = servicioConConfirmacion(true);
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.of(usuario(true)));
+        when(passwordEncoder.matches("otra-clave-123", HASH)).thenReturn(false);
+
+        assertThrows(CredencialesInvalidasException.class, () -> servicio.autenticar(CORREO, "otra-clave-123"));
+    }
+
+    @Test
+    void autenticar_conConfirmacionEncendidaYCorreoConfirmado_iniciaSesion() {
+        servicio = servicioConConfirmacion(true);
+        Usuario confirmado = usuario(true);
+        confirmado.setCorreoConfirmadoEn(LocalDateTime.now().minusDays(1));
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.of(confirmado));
+        when(passwordEncoder.matches(PASSWORD, HASH)).thenReturn(true);
+
+        AuthService.ResultadoAutenticacion resultado = servicio.autenticar(CORREO, PASSWORD);
+
+        assertEquals(confirmado, resultado.usuario());
+    }
+
+    @Test
+    void autenticar_conConfirmacionApagadaYCorreoSinConfirmar_iniciaSesion() {
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.of(usuario(true)));
+        when(passwordEncoder.matches(PASSWORD, HASH)).thenReturn(true);
+
+        AuthService.ResultadoAutenticacion resultado = servicio.autenticar(CORREO, PASSWORD);
+
+        assertFalse(resultado.cuentaReactivada());
+    }
+
+    private Usuario conId(Usuario usuario) {
+        usuario.setId(USUARIO_ID);
+        return usuario;
     }
 
     private Usuario usuario(boolean activo) {

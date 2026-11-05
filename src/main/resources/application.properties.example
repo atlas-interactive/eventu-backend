@@ -19,5 +19,9 @@ eventu.correo.sendgrid-api-key=${SENDGRID_API_KEY:}
 eventu.correo.remitente=admineventu@gmail.com
 eventu.jwt.expiracion-ms=86400000
 
-# Dirección de la web a la que apuntan los enlaces de los correos (recuperación de contraseña)
+# Dirección de la web a la que apuntan los enlaces de los correos (confirmación de correo y recuperación de contraseña)
 eventu.web.url=http://localhost:5173
+
+# Exigir que las cuentas nuevas confirmen el correo antes de iniciar sesión (en Render: EVENTU_REGISTRO_CONFIRMAR_CORREO).
+# Apagado por defecto: el registro funciona como antes y no se envía el correo de confirmación
+eventu.registro.confirmar-correo=false

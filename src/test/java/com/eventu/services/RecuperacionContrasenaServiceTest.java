@@ -33,6 +33,7 @@ import com.eventu.notificaciones.ContrasenaCambiada;
 import com.eventu.notificaciones.RecuperacionContrasenaSolicitada;
 import com.eventu.repositories.TokenRecuperacionRepository;
 import com.eventu.repositories.UsuarioRepository;
+import com.eventu.util.TokenSeguro;
 
 /** Pruebas de la recuperación de contraseña olvidada: solicitud del enlace y restablecimiento con el token */
 @ExtendWith(MockitoExtension.class)
@@ -71,7 +72,7 @@ class RecuperacionContrasenaServiceTest {
 
         String token = hecho.getValue().token();
         assertTrue(token.length() >= 43, "32 bytes en Base64 sin relleno");
-        assertEquals(RecuperacionContrasenaService.hash(token), guardado.getValue().getTokenHash());
+        assertEquals(TokenSeguro.hash(token), guardado.getValue().getTokenHash());
         assertNotEquals(token, guardado.getValue().getTokenHash());
         assertEquals(CORREO, hecho.getValue().correo());
         assertEquals(guardado.getValue().getCreadoEn().plus(RecuperacionContrasenaService.VIGENCIA_ENLACE),
@@ -117,7 +118,7 @@ class RecuperacionContrasenaServiceTest {
     void restablecerContrasena_tokenVigente_cambiaLaContrasenaMarcaElTokenUsadoYAvisaPorCorreo() {
         Usuario usuario = usuario();
         TokenRecuperacion vigente = token(LocalDateTime.now().plusMinutes(10), null);
-        when(tokenRepository.buscarPorHashConBloqueo(RecuperacionContrasenaService.hash(TOKEN))).thenReturn(Optional.of(vigente));
+        when(tokenRepository.buscarPorHashConBloqueo(TokenSeguro.hash(TOKEN))).thenReturn(Optional.of(vigente));
         when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
         when(tokenRepository.findByUsuarioIdAndUsadoEnIsNull(USUARIO_ID)).thenReturn(List.of(vigente));
         when(passwordEncoder.encode(NUEVA)).thenReturn("hash-nuevo");
@@ -133,9 +134,22 @@ class RecuperacionContrasenaServiceTest {
     }
 
     @Test
+    void restablecerContrasena_cuentaConCorreoSinConfirmar_loDejaConfirmadoPorqueAbrioUnEnlaceDelCorreo() {
+        Usuario usuario = usuario();
+        TokenRecuperacion vigente = token(LocalDateTime.now().plusMinutes(10), null);
+        when(tokenRepository.buscarPorHashConBloqueo(TokenSeguro.hash(TOKEN))).thenReturn(Optional.of(vigente));
+        when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.encode(NUEVA)).thenReturn("hash-nuevo");
+
+        servicio.restablecerContrasena(TOKEN, NUEVA);
+
+        assertNotNull(usuario.getCorreoConfirmadoEn());
+    }
+
+    @Test
     void restablecerContrasena_tokenVencido_lanzaSolicitudInvalidaYNoCambiaNada() {
         TokenRecuperacion vencido = token(LocalDateTime.now().minusMinutes(1), null);
-        when(tokenRepository.buscarPorHashConBloqueo(RecuperacionContrasenaService.hash(TOKEN))).thenReturn(Optional.of(vencido));
+        when(tokenRepository.buscarPorHashConBloqueo(TokenSeguro.hash(TOKEN))).thenReturn(Optional.of(vencido));
 
         SolicitudInvalidaException error = assertThrows(SolicitudInvalidaException.class,
                 () -> servicio.restablecerContrasena(TOKEN, NUEVA));
@@ -149,7 +163,7 @@ class RecuperacionContrasenaServiceTest {
     @Test
     void restablecerContrasena_tokenYaUsado_lanzaSolicitudInvalida() {
         TokenRecuperacion usado = token(LocalDateTime.now().plusMinutes(10), LocalDateTime.now().minusMinutes(2));
-        when(tokenRepository.buscarPorHashConBloqueo(RecuperacionContrasenaService.hash(TOKEN))).thenReturn(Optional.of(usado));
+        when(tokenRepository.buscarPorHashConBloqueo(TokenSeguro.hash(TOKEN))).thenReturn(Optional.of(usado));
 
         assertThrows(SolicitudInvalidaException.class, () -> servicio.restablecerContrasena(TOKEN, NUEVA));
 
@@ -166,15 +180,6 @@ class RecuperacionContrasenaServiceTest {
         verify(usuarioRepository, never()).save(any());
     }
 
-    @Test
-    void hash_esSha256EnHexadecimalYSiempreIgualParaElMismoToken() {
-        String hash = RecuperacionContrasenaService.hash(TOKEN);
-
-        assertEquals(64, hash.length());
-        assertEquals(hash, RecuperacionContrasenaService.hash(TOKEN));
-        assertNotEquals(hash, RecuperacionContrasenaService.hash(TOKEN + "x"));
-    }
-
     private Usuario usuario() {
         Usuario usuario = new Usuario();
         usuario.setId(USUARIO_ID);
@@ -188,7 +193,7 @@ class RecuperacionContrasenaServiceTest {
     private TokenRecuperacion token(LocalDateTime expiraEn, LocalDateTime usadoEn) {
         TokenRecuperacion token = new TokenRecuperacion();
         token.setUsuarioId(USUARIO_ID);
-        token.setTokenHash(RecuperacionContrasenaService.hash(TOKEN));
+        token.setTokenHash(TokenSeguro.hash(TOKEN));
         token.setExpiraEn(expiraEn);
         token.setUsadoEn(usadoEn);
         return token;
