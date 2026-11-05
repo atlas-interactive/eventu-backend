@@ -42,7 +42,7 @@ public class EventoController {
         this.inscripcionService = inscripcionService;
     }
 
-    /*Lista los eventos publicados (un administrador ve todos, incluidos los cancelados), con filtros opcionales*/
+    /** Lista los eventos publicados (un administrador ve todos, incluidos los cancelados), con filtros opcionales, del más próximo al más lejano */
     @GetMapping
     public ResponseEntity<List<EventoResponseDTO>> listarEventos(
             @RequestParam(required = false) Long categoriaId,
@@ -54,11 +54,17 @@ public class EventoController {
         return ResponseEntity.ok(eventoService.listarEventos(actual.id(), filtro));
     }
 
-    /** Lista los eventos del organizador que consulta, en cualquier estado (incluidos los cancelados) */
+    /** Lista los eventos del organizador que consulta, en cualquier estado (incluidos los cancelados), con los mismos filtros opcionales */
     @GetMapping("/mios")
     @PreAuthorize("hasAnyRole('ORGANIZADOR','ADMIN')")
-    public ResponseEntity<List<EventoResponseDTO>> listarMisEventos(@AuthenticationPrincipal UsuarioAutenticado actual) {
-        return ResponseEntity.ok(eventoService.listarEventosDeOrganizador(actual.id()));
+    public ResponseEntity<List<EventoResponseDTO>> listarMisEventos(
+            @RequestParam(required = false) Long categoriaId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            @RequestParam(required = false) String texto,
+            @AuthenticationPrincipal UsuarioAutenticado actual) {
+        EventoFiltroRequestDTO filtro = new EventoFiltroRequestDTO(categoriaId, fechaDesde, fechaHasta, texto);
+        return ResponseEntity.ok(eventoService.listarEventosDeOrganizador(actual.id(), filtro));
     }
 
     /** Crea un evento publicado. Solo organizadores y administradores (se identifican con el token) */

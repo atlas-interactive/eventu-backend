@@ -15,7 +15,11 @@ public final class EventoEspecificaciones {
     private EventoEspecificaciones() {
     }
 
-    public static Specification<Evento> filtrar(EventoFiltroRequestDTO filtro, boolean soloPublicados) {
+    /**
+     * @param soloPublicados true para dejar fuera los eventos cancelados
+     * @param organizadorId si no es null, solo los eventos de ese organizador
+     */
+    public static Specification<Evento> filtrar(EventoFiltroRequestDTO filtro, boolean soloPublicados, Long organizadorId) {
         return (root, query, cb) -> {
             if (query != null && query.getResultType() != Long.class && query.getResultType() != long.class) {
                 root.fetch("organizador");
@@ -25,6 +29,9 @@ public final class EventoEspecificaciones {
             List<Predicate> condiciones = new ArrayList<>();
             if (soloPublicados) {
                 condiciones.add(cb.equal(root.get("estado"), EstadoEvento.PUBLICADO));
+            }
+            if (organizadorId != null) {
+                condiciones.add(cb.equal(root.get("organizador").get("id"), organizadorId));
             }
             if (filtro.categoriaId() != null) {
                 condiciones.add(cb.equal(root.get("categoria").get("id"), filtro.categoriaId()));

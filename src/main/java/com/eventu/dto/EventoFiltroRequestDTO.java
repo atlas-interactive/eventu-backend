@@ -8,8 +8,4 @@ public record EventoFiltroRequestDTO(Long categoriaId, LocalDate fechaDesde, Loc
     public EventoFiltroRequestDTO {
         texto = texto == null || texto.isBlank() ? null : texto.trim();
     }
-
-    public boolean estaVacio() {
-        return categoriaId == null && fechaDesde == null && fechaHasta == null && texto == null;
-    }
 }
