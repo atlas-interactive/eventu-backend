@@ -319,6 +319,118 @@ class EventoServiceTest {
         return inscripcion;
     }
 
+    // HU-06: variantes de la edición
+
+    @Test
+    void editar_porElAdministrador_guardaElCambioEnUnEventoAjeno() {
+        Usuario administrador = usuario(ADMIN_ID, Rol.ADMIN);
+        Evento evento = evento(usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR), EstadoEvento.PUBLICADO, 10, 7);
+        prepararEdicion(administrador, evento, true);
+        when(eventoRepository.save(evento)).thenReturn(evento);
+        EventoActualizacionRequestDTO cambios = new EventoActualizacionRequestDTO();
+        cambios.setTitulo("Nuevo título");
+
+        Evento guardado = servicio.actualizarEvento(EVENTO_ID, cambios, ADMIN_ID);
+
+        assertEquals("Nuevo título", guardado.getTitulo());
+        assertEquals(ORGANIZADOR_ID, guardado.getOrganizador().getId());
+        verify(logService).registrarExito(ADMIN_ID, LogService.ACCION_EDITAR_EVENTO, LogService.ENTIDAD_EVENTO, EVENTO_ID);
+    }
+
+    @Test
+    void editar_conCupoIgualALosInscritos_guardaConCeroDisponibles() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 7);
+        prepararEdicion(dueno, evento, true);
+        when(eventoRepository.save(evento)).thenReturn(evento);
+        EventoActualizacionRequestDTO cambios = new EventoActualizacionRequestDTO();
+        cambios.setCuposMaximos(3);
+
+        Evento guardado = servicio.actualizarEvento(EVENTO_ID, cambios, ORGANIZADOR_ID);
+
+        assertEquals(3, guardado.getCuposMaximos());
+        assertEquals(0, guardado.getCuposDisponibles());
+    }
+
+    @Test
+    void editar_soloElTitulo_noTocaLosCupos() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 7);
+        prepararEdicion(dueno, evento, true);
+        when(eventoRepository.save(evento)).thenReturn(evento);
+        EventoActualizacionRequestDTO cambios = new EventoActualizacionRequestDTO();
+        cambios.setTitulo("Nuevo título");
+
+        Evento guardado = servicio.actualizarEvento(EVENTO_ID, cambios, ORGANIZADOR_ID);
+
+        assertEquals(10, guardado.getCuposMaximos());
+        assertEquals(7, guardado.getCuposDisponibles());
+    }
+
+    @Test
+    void editar_todosLosCamposYUnaCategoriaActiva_aplicaCadaCambio() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 10);
+        prepararEdicion(dueno, evento, true);
+        when(eventoRepository.save(evento)).thenReturn(evento);
+        when(categoriaRepository.findById(CATEGORIA_ID)).thenReturn(Optional.of(categoria(true)));
+        LocalDateTime nuevaFecha = LocalDateTime.now().plusDays(40);
+        EventoActualizacionRequestDTO cambios = new EventoActualizacionRequestDTO();
+        cambios.setDescripcion("  Nueva descripción  ");
+        cambios.setUbicacion("  Laboratorio 3  ");
+        cambios.setFechaInicio(nuevaFecha);
+        cambios.setCertificable(true);
+        cambios.setCategoriaId(CATEGORIA_ID);
+
+        Evento guardado = servicio.actualizarEvento(EVENTO_ID, cambios, ORGANIZADOR_ID);
+
+        assertEquals("Nueva descripción", guardado.getDescripcion());
+        assertEquals("Laboratorio 3", guardado.getUbicacion());
+        assertEquals(nuevaFecha, guardado.getFechaInicio());
+        assertTrue(guardado.getCertificable());
+        assertEquals(CATEGORIA_ID, guardado.getCategoria().getId());
+    }
+
+    @Test
+    void editar_cambiandoAUnaCategoriaInactiva_lanzaSolicitudInvalidaYNoGuarda() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 10);
+        prepararEdicion(dueno, evento, true);
+        when(categoriaRepository.findById(CATEGORIA_ID)).thenReturn(Optional.of(categoria(false)));
+        EventoActualizacionRequestDTO cambios = new EventoActualizacionRequestDTO();
+        cambios.setCategoriaId(CATEGORIA_ID);
+
+        assertThrows(SolicitudInvalidaException.class, () -> servicio.actualizarEvento(EVENTO_ID, cambios, ORGANIZADOR_ID));
+
+        verify(eventoRepository, never()).save(any());
+    }
+
+    @Test
+    void editar_conservandoSuCategoriaYaDesactivada_loPermite() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 10);
+        evento.setCategoria(categoria(false));
+        prepararEdicion(dueno, evento, true);
+        when(eventoRepository.save(evento)).thenReturn(evento);
+        when(categoriaRepository.findById(CATEGORIA_ID)).thenReturn(Optional.of(categoria(false)));
+        EventoActualizacionRequestDTO cambios = new EventoActualizacionRequestDTO();
+        cambios.setCategoriaId(CATEGORIA_ID);
+
+        Evento guardado = servicio.actualizarEvento(EVENTO_ID, cambios, ORGANIZADOR_ID);
+
+        assertEquals(CATEGORIA_ID, guardado.getCategoria().getId());
+    }
+
+    @Test
+    void editar_unEventoInexistente_lanzaNoEncontrado() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        when(autorizacionService.obtenerGestorDeEventos(ORGANIZADOR_ID)).thenReturn(dueno);
+        when(eventoRepository.buscarPorIdConBloqueo(EVENTO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNoEncontradoException.class,
+                () -> servicio.actualizarEvento(EVENTO_ID, new EventoActualizacionRequestDTO(), ORGANIZADOR_ID));
+    }
+
     private void prepararEdicion(Usuario gestor, Evento evento, boolean puedeModificar) {
         when(autorizacionService.obtenerGestorDeEventos(gestor.getId())).thenReturn(gestor);
         when(eventoRepository.buscarPorIdConBloqueo(EVENTO_ID)).thenReturn(Optional.of(evento));
