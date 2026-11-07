@@ -12,6 +12,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -32,8 +34,10 @@ import com.eventu.models.Usuario;
 import com.eventu.repositories.AsistenciaRepository;
 import com.eventu.repositories.EventoRepository;
 import com.eventu.repositories.InscripcionRepository;
+import com.eventu.dto.InscripcionResponseDTO;
+import com.eventu.util.Mensajes;
 
-/** Pruebas de HU-10 (inscribirse en un evento). Cada prueba indica el escenario que cubre */
+/** Pruebas de HU-10 (inscribirse), HU-11 (mis inscripciones) y HU-14 (mi código QR). Cada prueba indica el escenario que cubre */
 @ExtendWith(MockitoExtension.class)
 class InscripcionServiceTest {
 
@@ -227,7 +231,69 @@ class InscripcionServiceTest {
         assertEquals(EstadoInscripcion.ACTIVA, nueva.getEstado());
     }
 
+    // HU-11: mis inscripciones
+
+    @Test
+    void listarInscripcionesDeUsuario_devuelveSusInscripcionesConElEvento() {
+        when(inscripcionRepository.findByUsuarioId(USUARIO_ID)).thenReturn(List.of(inscripcionDe(USUARIO_ID, EstadoInscripcion.ACTIVA)));
+
+        List<InscripcionResponseDTO> resultado = servicio.listarInscripcionesDeUsuario(USUARIO_ID);
+
+        assertEquals(1, resultado.size());
+        assertEquals(EVENTO_ID, resultado.get(0).eventoId());
+    }
+
+    // HU-14: mi código QR
+
+    @Test
+    void obtenerCodigoQr_inscripcionActivaPropia_devuelveElCodigoYElEvento() {
+        when(inscripcionRepository.findById(500L)).thenReturn(Optional.of(inscripcionDe(USUARIO_ID, EstadoInscripcion.ACTIVA)));
+
+        Map<String, Object> qr = servicio.obtenerCodigoQr(500L, USUARIO_ID);
+
+        assertEquals("qr-500", qr.get("codigoQr"));
+        assertEquals("ACTIVA", qr.get("estado"));
+        assertEquals("Evento", qr.get("evento"));
+    }
+
+    @Test
+    void obtenerCodigoQr_inscripcionDeOtroUsuario_lanzaAccesoDenegado() {
+        when(inscripcionRepository.findById(500L)).thenReturn(Optional.of(inscripcionDe(USUARIO_ID, EstadoInscripcion.ACTIVA)));
+
+        AccesoDenegadoException error = assertThrows(AccesoDenegadoException.class, () -> servicio.obtenerCodigoQr(500L, 99L));
+
+        assertEquals("No tienes permiso para ver este código QR.", error.getMessage());
+    }
+
+    @Test
+    void obtenerCodigoQr_inscripcionCancelada_lanzaConflicto() {
+        when(inscripcionRepository.findById(500L)).thenReturn(Optional.of(inscripcionDe(USUARIO_ID, EstadoInscripcion.CANCELADA)));
+
+        ConflictoException error = assertThrows(ConflictoException.class, () -> servicio.obtenerCodigoQr(500L, USUARIO_ID));
+
+        assertEquals("La inscripción está cancelada; el código QR ya no es válido.", error.getMessage());
+    }
+
+    @Test
+    void obtenerCodigoQr_inscripcionInexistente_lanzaNoEncontrado() {
+        when(inscripcionRepository.findById(500L)).thenReturn(Optional.empty());
+
+        RecursoNoEncontradoException error = assertThrows(RecursoNoEncontradoException.class, () -> servicio.obtenerCodigoQr(500L, USUARIO_ID));
+
+        assertEquals(Mensajes.INSCRIPCION_NO_ENCONTRADA, error.getMessage());
+    }
+
     // Utilidades
+
+    private static Inscripcion inscripcionDe(Long usuarioId, EstadoInscripcion estado) {
+        Inscripcion inscripcion = new Inscripcion();
+        inscripcion.setId(500L);
+        inscripcion.setUsuario(usuario(usuarioId, Rol.USUARIO));
+        inscripcion.setEvento(evento(10, 3));
+        inscripcion.setEstado(estado);
+        inscripcion.setCodigoQr("qr-500");
+        return inscripcion;
+    }
 
     private void prepararInscripcion(Usuario usuario, Evento evento) {
         when(autorizacionService.obtenerUsuario(usuario.getId())).thenReturn(usuario);
