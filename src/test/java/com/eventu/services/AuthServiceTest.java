@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +19,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -218,6 +220,75 @@ class AuthServiceTest {
         AuthService.ResultadoAutenticacion resultado = servicio.autenticar(CORREO, PASSWORD);
 
         assertFalse(resultado.cuentaReactivada());
+    }
+
+    // HU-01 escenario 1: registro con datos válidos
+
+    @Test
+    void registrarUsuario_conDatosValidos_guardaUsuarioConRolUsuarioYContrasenaCifrada() {
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(PASSWORD)).thenReturn(HASH);
+        when(usuarioRepository.save(any())).thenAnswer(invocacion -> conId(invocacion.getArgument(0)));
+
+        Usuario guardado = servicio.registrarUsuario(solicitudRegistro());
+
+        assertEquals(Rol.USUARIO, guardado.getRol());
+        assertEquals(HASH, guardado.getPasswordHash());
+        assertFalse(PASSWORD.equals(guardado.getPasswordHash()));
+        verify(logService).registrarExito(USUARIO_ID, LogService.ACCION_REGISTRO, LogService.ENTIDAD_USUARIO, USUARIO_ID);
+    }
+
+    @Test
+    void registrarUsuario_conEspaciosYMayusculas_guardaNombreYCorreoNormalizados() {
+        RegistroRequestDTO solicitud = new RegistroRequestDTO();
+        solicitud.setNombre("  Laura Gomez  ");
+        solicitud.setCorreo("  Laura@UNILLANOS.edu.co  ");
+        solicitud.setPassword(PASSWORD);
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.empty());
+        when(usuarioRepository.save(any())).thenAnswer(invocacion -> conId(invocacion.getArgument(0)));
+
+        servicio.registrarUsuario(solicitud);
+
+        ArgumentCaptor<Usuario> capturado = ArgumentCaptor.forClass(Usuario.class);
+        verify(usuarioRepository).save(capturado.capture());
+        assertEquals("Laura Gomez", capturado.getValue().getNombre());
+        assertEquals(CORREO, capturado.getValue().getCorreo());
+    }
+
+    // HU-02 escenario 1: credenciales
+
+    @Test
+    void autenticar_correoInexistente_lanzaCredencialesInvalidasConElMismoMensajeYSinCompararContrasena() {
+        when(usuarioRepository.findByCorreoIgnoreCase("noexiste@unillanos.edu.co")).thenReturn(Optional.empty());
+
+        CredencialesInvalidasException error = assertThrows(CredencialesInvalidasException.class,
+                () -> servicio.autenticar("noexiste@unillanos.edu.co", PASSWORD));
+
+        assertEquals("Correo o contraseña incorrectos.", error.getMessage());
+        verifyNoInteractions(passwordEncoder);
+        verify(logService).registrarFallo(null, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, null, "Credenciales inválidas");
+    }
+
+    @Test
+    void autenticar_cuentaActivaConPasswordIncorrecta_lanzaCredencialesInvalidasYRegistraElFallo() {
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.of(usuario(true)));
+        when(passwordEncoder.matches("otra-clave-123", HASH)).thenReturn(false);
+
+        CredencialesInvalidasException error = assertThrows(CredencialesInvalidasException.class,
+                () -> servicio.autenticar(CORREO, "otra-clave-123"));
+
+        assertEquals("Correo o contraseña incorrectos.", error.getMessage());
+        verify(logService).registrarFallo(USUARIO_ID, LogService.ACCION_LOGIN, LogService.ENTIDAD_USUARIO, USUARIO_ID, "Credenciales inválidas");
+    }
+
+    @Test
+    void autenticar_correoConMayusculasYEspacios_buscaLaCuentaEnMinusculas() {
+        when(usuarioRepository.findByCorreoIgnoreCase(CORREO)).thenReturn(Optional.of(usuario(true)));
+        when(passwordEncoder.matches(PASSWORD, HASH)).thenReturn(true);
+
+        AuthService.ResultadoAutenticacion resultado = servicio.autenticar("  LAURA@unillanos.edu.co ", PASSWORD);
+
+        assertEquals(USUARIO_ID, resultado.usuario().getId());
     }
 
     private Usuario conId(Usuario usuario) {
