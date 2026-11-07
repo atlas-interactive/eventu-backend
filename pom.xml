@@ -99,6 +99,16 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.14</version>
+				<configuration>
+					<!-- Alcance de la caja blanca según el plan de pruebas (9.1.3); las demás capas se verifican por integración -->
+					<excludes>
+						<exclude>com/eventu/EventuBackendApplication*</exclude>
+						<exclude>com/eventu/config/**</exclude>
+						<exclude>com/eventu/controllers/**</exclude>
+						<exclude>com/eventu/repositories/**</exclude>
+						<exclude>com/eventu/models/**</exclude>
+					</excludes>
+				</configuration>
 				<executions>
 					<execution>
 						<id>preparar-agente</id>
