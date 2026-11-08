@@ -149,6 +149,18 @@ class CategoriaServiceTest {
     }
 
     @Test
+    void activar_categoriaYaActiva_noCambiaNadaNiRegistraLog() {
+        Categoria existente = categoria(5L, "Cultural", true);
+        when(categoriaRepository.findById(5L)).thenReturn(Optional.of(existente));
+
+        CategoriaResponseDTO respuesta = servicio.activarCategoria(5L, ADMIN_ID);
+
+        assertTrue(respuesta.activo());
+        verify(categoriaRepository, never()).save(any());
+        verify(logService, never()).registrarExito(any(), anyString(), anyString(), any());
+    }
+
+    @Test
     void activar_categoriaInactiva_laVuelveAMarcarActiva() {
         Categoria existente = categoria(5L, "Cultural", false);
         when(categoriaRepository.findById(5L)).thenReturn(Optional.of(existente));
