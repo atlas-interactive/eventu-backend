@@ -27,6 +27,7 @@ import com.eventu.repositories.EventoEspecificaciones;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /** Creación, edición y consulta de eventos */
@@ -87,9 +88,9 @@ public class EventoService {
     static final Sort ORDEN_LISTADO = Sort.by("fechaInicio").ascending().and(Sort.by("id").ascending());
 
     /**
-     * Lista los eventos que el usuario puede ver, con filtros opcionales: los publicados, y para un administrador
-     * también los cancelados. Un organizador ve sus propios eventos cancelados en
-     * {@link #listarEventosDeOrganizador(Long, EventoFiltroRequestDTO)}
+     * Lista los eventos que el usuario puede ver, con filtros opcionales: los publicados que aún no han iniciado,
+     * y para un administrador todos, incluidos los cancelados y los que ya iniciaron. Un organizador ve sus propios
+     * eventos cancelados o ya iniciados en {@link #listarEventosDeOrganizador(Long, EventoFiltroRequestDTO)}
      *
      * @throws SolicitudInvalidaException si el rango de fechas está invertido o el texto es demasiado largo
      */
@@ -97,8 +98,8 @@ public class EventoService {
     public List<EventoResponseDTO> listarEventos(Long usuarioId, EventoFiltroRequestDTO filtro) {
         validarFiltro(filtro);
         Usuario usuario = autorizacionService.obtenerUsuario(usuarioId);
-        boolean soloPublicados = usuario.getRol() != Rol.ADMIN;
-        return consultar(EventoEspecificaciones.filtrar(filtro, soloPublicados, null));
+        boolean soloDisponibles = usuario.getRol() != Rol.ADMIN;
+        return consultar(EventoEspecificaciones.filtrar(filtro, soloDisponibles, null, LocalDateTime.now()));
     }
 
     /**Devuelve el detalle de un evento (HU-09). Un evento cancelado solo lo ve su organizador o un administrador*/
@@ -125,7 +126,7 @@ public class EventoService {
     public List<EventoResponseDTO> listarEventosDeOrganizador(Long usuarioId, EventoFiltroRequestDTO filtro) {
         Usuario gestor = autorizacionService.obtenerGestorDeEventos(usuarioId);
         validarFiltro(filtro);
-        return consultar(EventoEspecificaciones.filtrar(filtro, false, gestor.getId()));
+        return consultar(EventoEspecificaciones.filtrar(filtro, false, gestor.getId(), null));
     }
 
     private void validarFiltro(EventoFiltroRequestDTO filtro) {
