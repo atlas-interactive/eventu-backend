@@ -95,6 +95,35 @@
 							<mainClass>com.eventu.EventuBackendApplication</mainClass>
 					</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.14</version>
+				<configuration>
+					<excludes>
+						<exclude>com/eventu/EventuBackendApplication*</exclude>
+						<exclude>com/eventu/config/**</exclude>
+						<exclude>com/eventu/controllers/**</exclude>
+						<exclude>com/eventu/repositories/**</exclude>
+						<exclude>com/eventu/models/**</exclude>
+					</excludes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>preparar-agente</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>reporte-cobertura</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
