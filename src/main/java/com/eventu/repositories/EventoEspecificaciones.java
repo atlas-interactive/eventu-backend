@@ -6,6 +6,7 @@ import com.eventu.models.Evento;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,10 +17,12 @@ public final class EventoEspecificaciones {
     }
 
     /**
-     * @param soloPublicados true para dejar fuera los eventos cancelados
+     * @param soloDisponibles true para dejar solo los eventos publicados que aún no han iniciado
      * @param organizadorId si no es null, solo los eventos de ese organizador
+     * @param ahora momento contra el que se compara la fecha de inicio cuando soloDisponibles es true
      */
-    public static Specification<Evento> filtrar(EventoFiltroRequestDTO filtro, boolean soloPublicados, Long organizadorId) {
+    public static Specification<Evento> filtrar(EventoFiltroRequestDTO filtro, boolean soloDisponibles, Long organizadorId,
+                                                LocalDateTime ahora) {
         return (root, query, cb) -> {
             if (query != null && query.getResultType() != Long.class && query.getResultType() != long.class) {
                 root.fetch("organizador");
@@ -27,8 +30,9 @@ public final class EventoEspecificaciones {
             }
 
             List<Predicate> condiciones = new ArrayList<>();
-            if (soloPublicados) {
+            if (soloDisponibles) {
                 condiciones.add(cb.equal(root.get("estado"), EstadoEvento.PUBLICADO));
+                condiciones.add(cb.greaterThanOrEqualTo(root.get("fechaInicio"), ahora));
             }
             if (organizadorId != null) {
                 condiciones.add(cb.equal(root.get("organizador").get("id"), organizadorId));
