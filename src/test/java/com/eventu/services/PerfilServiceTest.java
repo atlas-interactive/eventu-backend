@@ -69,7 +69,7 @@ class PerfilServiceTest {
     // Escenario 1.0: consultar el perfil
 
     @Test
-    void obtenerPerfil_usuarioAutenticado_devuelveNombreCorreoRolYCodigo() {
+    void obtenerPerfil_usuarioAutenticado_devuelveNombreCorreoYRol() {
         when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario(Rol.ORGANIZADOR)));
 
         PerfilResponseDTO perfil = servicio.obtenerPerfil(USUARIO_ID);
@@ -77,33 +77,20 @@ class PerfilServiceTest {
         assertEquals("Laura Gomez", perfil.nombre());
         assertEquals(CORREO, perfil.correo());
         assertEquals("ORGANIZADOR", perfil.rol());
-        assertEquals("160001234", perfil.codigoInstitucional());
     }
 
     // Escenario 2.0: editar el perfil
 
     @Test
-    void actualizarPerfil_datosValidos_actualizaNombreYCodigoYRegistraLog() {
+    void actualizarPerfil_datosValidos_actualizaNombreYRegistraLog() {
         Usuario usuario = usuario(Rol.USUARIO);
         when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
         when(usuarioRepository.save(usuario)).thenReturn(usuario);
 
-        PerfilResponseDTO perfil = servicio.actualizarPerfil(USUARIO_ID, cambios("  Laura Gómez Ruiz ", " 160009999 ", null));
+        PerfilResponseDTO perfil = servicio.actualizarPerfil(USUARIO_ID, cambios("  Laura Gómez Ruiz ", null));
 
         assertEquals("Laura Gómez Ruiz", perfil.nombre());
-        assertEquals("160009999", perfil.codigoInstitucional());
         verify(logService).registrarExito(USUARIO_ID, LogService.ACCION_EDITAR_PERFIL, LogService.ENTIDAD_USUARIO, USUARIO_ID);
-    }
-
-    @Test
-    void actualizarPerfil_codigoEnBlanco_loGuardaVacio() {
-        Usuario usuario = usuario(Rol.USUARIO);
-        when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
-        when(usuarioRepository.save(usuario)).thenReturn(usuario);
-
-        servicio.actualizarPerfil(USUARIO_ID, cambios("Laura Gomez", "   ", CORREO));
-
-        assertNull(usuario.getCodigoInstitucional());
     }
 
     @Test
@@ -111,7 +98,7 @@ class PerfilServiceTest {
         when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario(Rol.USUARIO)));
 
         SolicitudInvalidaException error = assertThrows(SolicitudInvalidaException.class,
-                () -> servicio.actualizarPerfil(USUARIO_ID, cambios("Laura Gomez", null, "otra@unillanos.edu.co")));
+                () -> servicio.actualizarPerfil(USUARIO_ID, cambios("Laura Gomez", "otra@unillanos.edu.co")));
 
         assertEquals(PerfilService.CORREO_NO_EDITABLE, error.getMessage());
         verify(usuarioRepository, never()).save(any());
@@ -275,14 +262,12 @@ class PerfilServiceTest {
         usuario.setPasswordHash(HASH);
         usuario.setRol(rol);
         usuario.setActivo(true);
-        usuario.setCodigoInstitucional("160001234");
         return usuario;
     }
 
-    private PerfilActualizacionDTO cambios(String nombre, String codigo, String correo) {
+    private PerfilActualizacionDTO cambios(String nombre, String correo) {
         PerfilActualizacionDTO datos = new PerfilActualizacionDTO();
         datos.setNombre(nombre);
-        datos.setCodigoInstitucional(codigo);
         datos.setCorreo(correo);
         return datos;
     }

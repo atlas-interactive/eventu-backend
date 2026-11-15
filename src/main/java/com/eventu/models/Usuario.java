@@ -47,9 +47,6 @@ public class Usuario {
         this.creadoEn = LocalDateTime.now();
     }
 
-    @Column(name = "codigo_institucional", length = 20)
-    private String codigoInstitucional;
-
     /** Último cambio de contraseña; los JWT emitidos antes de este momento ya no se aceptan */
     @Column(name = "password_actualizada_en")
     private LocalDateTime passwordActualizadaEn;
@@ -78,9 +75,6 @@ public class Usuario {
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
-
-    public String getCodigoInstitucional() { return codigoInstitucional; }
-    public void setCodigoInstitucional(String codigoInstitucional) { this.codigoInstitucional = codigoInstitucional; }
 
     public LocalDateTime getPasswordActualizadaEn() { return passwordActualizadaEn; }
     public void setPasswordActualizadaEn(LocalDateTime passwordActualizadaEn) { this.passwordActualizadaEn = passwordActualizadaEn; }
