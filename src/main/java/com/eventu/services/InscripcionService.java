@@ -102,7 +102,7 @@ public class InscripcionService {
      * Cancela una inscripción y libera su cupo. La inscripción se conserva como CANCELADA
      *
      * @throws AccesoDenegadoException si la inscripción pertenece a otro usuario
-     * @throws ConflictoException si ya estaba cancelada o si ya tiene asistencia registrada
+     * @throws ConflictoException si ya estaba cancelada, si ya tiene asistencia registrada o si el evento ya inició
      */
     @Transactional
     public Inscripcion cancelarInscripcion(Long inscripcionId, Long usuarioId) {
@@ -122,6 +122,11 @@ public class InscripcionService {
             logService.registrarFallo(usuarioId, LogService.ACCION_CANCELAR_INSCRIPCION,
                     LogService.ENTIDAD_INSCRIPCION, inscripcionId, "Asistencia ya registrada");
             throw new ConflictoException("No puedes cancelar tu inscripción porque ya asististe al evento.");
+        }
+        if (!inscripcion.getEvento().getFechaInicio().isAfter(LocalDateTime.now())) {
+            logService.registrarFallo(usuarioId, LogService.ACCION_CANCELAR_INSCRIPCION,
+                    LogService.ENTIDAD_INSCRIPCION, inscripcionId, "Evento ya iniciado");
+            throw new ConflictoException("No se puede cancelar la inscripción después de que inicia el evento.");
         }
 
         Evento evento = eventoRepository.buscarPorIdConBloqueo(inscripcion.getEvento().getId())

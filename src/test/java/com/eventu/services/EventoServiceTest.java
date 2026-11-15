@@ -182,6 +182,24 @@ class EventoServiceTest {
                 eq(LogService.ENTIDAD_EVENTO), eq(EVENTO_ID), anyString());
     }
 
+    // HU-06 escenario 1.0: evento que ya inició
+
+    @Test
+    void editar_unEventoQueYaInicio_lanzaConflictoYNoGuarda() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 10);
+        evento.setFechaInicio(LocalDateTime.now().minusHours(1));
+        prepararEdicion(dueno, evento, true);
+
+        ConflictoException error = assertThrows(ConflictoException.class,
+                () -> servicio.actualizarEvento(EVENTO_ID, new EventoActualizacionRequestDTO(), ORGANIZADOR_ID));
+
+        assertEquals("No se puede editar un evento que ya inició.", error.getMessage());
+        verify(eventoRepository, never()).save(any());
+        verify(logService).registrarFallo(ORGANIZADOR_ID, LogService.ACCION_EDITAR_EVENTO,
+                LogService.ENTIDAD_EVENTO, EVENTO_ID, "Evento ya iniciado");
+    }
+
     // HU-06 escenario 1.0: cupo menor que los inscritos
 
     @Test
@@ -286,6 +304,26 @@ class EventoServiceTest {
         verifyNoInteractions(inscripcionRepository, publicador);
         verify(logService).registrarFallo(eq(ORGANIZADOR_ID), eq(LogService.ACCION_CANCELAR_EVENTO),
                 eq(LogService.ENTIDAD_EVENTO), eq(EVENTO_ID), anyString());
+    }
+
+    // HU-07 escenario 1.0: evento que ya inició
+
+    @Test
+    void cancelar_unEventoQueYaInicio_lanzaConflictoSinCancelarInscripcionesNiAvisar() {
+        Usuario dueno = usuario(ORGANIZADOR_ID, Rol.ORGANIZADOR);
+        Evento evento = evento(dueno, EstadoEvento.PUBLICADO, 10, 8);
+        evento.setFechaInicio(LocalDateTime.now().minusMinutes(5));
+        prepararEdicion(dueno, evento, true);
+
+        ConflictoException error = assertThrows(ConflictoException.class,
+                () -> servicio.cancelarEvento(EVENTO_ID, ORGANIZADOR_ID));
+
+        assertEquals("No se puede cancelar un evento después de que inicia.", error.getMessage());
+        assertEquals(EstadoEvento.PUBLICADO, evento.getEstado());
+        verify(eventoRepository, never()).save(any());
+        verifyNoInteractions(inscripcionRepository, publicador);
+        verify(logService).registrarFallo(ORGANIZADOR_ID, LogService.ACCION_CANCELAR_EVENTO,
+                LogService.ENTIDAD_EVENTO, EVENTO_ID, "Evento ya iniciado");
     }
 
     @Test
@@ -523,6 +561,7 @@ class EventoServiceTest {
         evento.setEstado(estado);
         evento.setCuposMaximos(maximos);
         evento.setCuposDisponibles(disponibles);
+        evento.setFechaInicio(LocalDateTime.now().plusDays(10));
         return evento;
     }
 
