@@ -64,7 +64,7 @@ public class PerfilService {
     }
 
     /**
-     * Actualiza el nombre y el código institucional. El correo es de solo lectura
+     * Actualiza el nombre. El correo es de solo lectura
      *
      * @return el perfil actualizado
      * @throws SolicitudInvalidaException si se envía un correo distinto al registrado
@@ -79,8 +79,6 @@ public class PerfilService {
         }
 
         usuario.setNombre(datos.getNombre().trim());
-        String codigo = datos.getCodigoInstitucional();
-        usuario.setCodigoInstitucional(codigo == null || codigo.isBlank() ? null : codigo.trim());
         Usuario guardado = usuarioRepository.save(usuario);
 
         logService.registrarExito(usuarioId, LogService.ACCION_EDITAR_PERFIL, LogService.ENTIDAD_USUARIO, usuarioId);
