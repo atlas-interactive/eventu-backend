@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -137,6 +138,27 @@ class CancelarInscripcionServiceTest {
                 LogService.ENTIDAD_INSCRIPCION, INSCRIPCION_ID, "Asistencia ya registrada");
     }
 
+    // Escenario: no se puede cancelar si el evento ya inició
+
+    @Test
+    void cancelar_conElEventoYaIniciado_lanzaConflictoYConservaLaInscripcionActiva() {
+        Evento evento = evento(4);
+        evento.setFechaInicio(LocalDateTime.now().minusMinutes(10));
+        Inscripcion inscripcion = inscripcion(USUARIO_ID, evento, EstadoInscripcion.ACTIVA);
+        when(inscripcionRepository.findById(INSCRIPCION_ID)).thenReturn(Optional.of(inscripcion));
+        when(asistenciaRepository.existsByInscripcionId(INSCRIPCION_ID)).thenReturn(false);
+
+        ConflictoException error = assertThrows(ConflictoException.class,
+                () -> servicio.cancelarInscripcion(INSCRIPCION_ID, USUARIO_ID));
+
+        assertEquals("No se puede cancelar la inscripción después de que inicia el evento.", error.getMessage());
+        assertEquals(EstadoInscripcion.ACTIVA, inscripcion.getEstado());
+        assertEquals(4, evento.getCuposDisponibles());
+        verify(eventoRepository, never()).save(any(Evento.class));
+        verify(logService).registrarFallo(USUARIO_ID, LogService.ACCION_CANCELAR_INSCRIPCION,
+                LogService.ENTIDAD_INSCRIPCION, INSCRIPCION_ID, "Evento ya iniciado");
+    }
+
     // Escenario: el evento de la inscripción ya no existe al liberar el cupo
 
     @Test
@@ -158,6 +180,7 @@ class CancelarInscripcionServiceTest {
         Evento evento = new Evento();
         evento.setId(EVENTO_ID);
         evento.setCuposDisponibles(cuposDisponibles);
+        evento.setFechaInicio(LocalDateTime.now().plusDays(3));
         return evento;
     }
 

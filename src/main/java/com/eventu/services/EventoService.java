@@ -138,6 +138,11 @@ public class EventoService {
         }
     }
 
+    /** Un evento inicia en su fecha y hora de inicio, en hora de Colombia (zona de la aplicación) */
+    private static boolean yaInicio(Evento evento) {
+        return !evento.getFechaInicio().isAfter(LocalDateTime.now());
+    }
+
     private List<EventoResponseDTO> consultar(Specification<Evento> especificacion) {
         return eventoRepository.findAll(especificacion, ORDEN_LISTADO).stream()
                 .map(EventoResponseDTO::desde)
@@ -147,7 +152,7 @@ public class EventoService {
     /**
      * Edita los campos enviados de un evento
      * @throws AccesoDenegadoException si el usuario no es el dueño del evento
-     * @throws ConflictoException si el evento está cancelado, o si el nuevo cupo es menor que los inscritos actuales
+     * @throws ConflictoException si el evento está cancelado o ya inició, o si el nuevo cupo es menor que los inscritos actuales
      */
     @Transactional
     public Evento actualizarEvento(Long eventoId, EventoActualizacionRequestDTO request, Long organizadorId) {
@@ -166,6 +171,11 @@ public class EventoService {
                     eventoId, "Evento cancelado");
             throw new ConflictoException("No se puede editar un evento cancelado.");
         }
+        if (yaInicio(evento)) {
+            logService.registrarFallo(organizadorId, LogService.ACCION_EDITAR_EVENTO, LogService.ENTIDAD_EVENTO,
+                    eventoId, "Evento ya iniciado");
+            throw new ConflictoException("No se puede editar un evento que ya inició.");
+        }
 
         aplicarCambios(evento, request);
 
@@ -179,7 +189,7 @@ public class EventoService {
      * y avisa por correo a esos usuarios cuando la transacción se confirma
      *
      * @throws AccesoDenegadoException si el usuario no es el dueño del evento ni administrador
-     * @throws ConflictoException si el evento ya estaba cancelado
+     * @throws ConflictoException si el evento ya estaba cancelado o ya inició
      */
     @Transactional
     public Evento cancelarEvento(Long eventoId, Long usuarioId) {
@@ -188,6 +198,11 @@ public class EventoService {
             logService.registrarFallo(usuarioId, LogService.ACCION_CANCELAR_EVENTO, LogService.ENTIDAD_EVENTO,
                     eventoId, "Evento ya cancelado");
             throw new ConflictoException("El evento ya está cancelado.");
+        }
+        if (yaInicio(evento)) {
+            logService.registrarFallo(usuarioId, LogService.ACCION_CANCELAR_EVENTO, LogService.ENTIDAD_EVENTO,
+                    eventoId, "Evento ya iniciado");
+            throw new ConflictoException("No se puede cancelar un evento después de que inicia.");
         }
 
         List<Inscripcion> activas = inscripcionRepository.findByEventoIdAndEstado(eventoId, EstadoInscripcion.ACTIVA);
